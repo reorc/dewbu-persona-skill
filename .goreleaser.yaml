@@ -49,7 +49,7 @@ release:
     owner: reorc
     name: dewbu-persona-skill
   name_template: "dewbu {{ .Version }}"
-  make_latest: true
+  make_latest: "auto"
   extra_files:
     - glob: ./.release-extra/dewbu-skills.tar.gz
       name_template: dewbu-skills_{{ .Version }}.tar.gz
