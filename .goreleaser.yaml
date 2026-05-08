@@ -46,7 +46,7 @@ release:
   name_template: "dewbu {{ .Version }}"
   make_latest: true
   extra_files:
-    - glob: ./dist/dewbu-skills.tar.gz
+    - glob: ./extra/dewbu-skills.tar.gz
       name_template: dewbu-skills_{{ .Version }}.tar.gz
     - glob: ./install.sh
       name_template: install.sh

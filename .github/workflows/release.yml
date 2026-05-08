@@ -24,8 +24,8 @@ jobs:
 
       - name: Package skills
         run: |
-          mkdir -p dist
-          tar -czf dist/dewbu-skills.tar.gz -C skills .
+          mkdir -p extra
+          tar -czf extra/dewbu-skills.tar.gz -C skills .
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v6
