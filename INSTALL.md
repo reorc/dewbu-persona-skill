@@ -8,7 +8,7 @@
 ### Install db9
 
 ```bash
-curl -fsSL https://db9.ai/install.sh | sh
+curl -fsSL https://db9.ai/install | sh
 db9 login --api-key <YOUR_API_KEY>
 db9 status  # should show dewbu_persona_v2
 ```
