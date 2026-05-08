@@ -6,6 +6,11 @@ dist: dist
 env:
   - CGO_ENABLED=0
 
+before:
+  hooks:
+    - mkdir -p .release-extra
+    - tar -czf .release-extra/dewbu-skills.tar.gz -C skills .
+
 builds:
   - id: dewbu
     binary: dewbu
@@ -46,7 +51,7 @@ release:
   name_template: "dewbu {{ .Version }}"
   make_latest: true
   extra_files:
-    - glob: ./extra/dewbu-skills.tar.gz
+    - glob: ./.release-extra/dewbu-skills.tar.gz
       name_template: dewbu-skills_{{ .Version }}.tar.gz
     - glob: ./install.sh
       name_template: install.sh

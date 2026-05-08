@@ -8,3 +8,4 @@
 # Go build
 dist/
 /dewbu
+.release-extra/
