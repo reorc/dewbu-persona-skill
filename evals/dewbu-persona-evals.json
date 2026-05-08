@@ -1,0 +1,103 @@
+{
+  "skill_name": "dewbu-persona",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Dewbu 产品用户反馈中，电池相关的问题有多少人提到？主要是什么问题？给我看几条原始评论",
+      "expected_output": "应该查询 battery 相关标签和 evidence，返回统计数据 + 具体 evidence 原文。tier1 标签命中应该有 800+ 条。",
+      "assertions": [
+        {
+          "name": "uses_tags_search_first",
+          "type": "tool_usage",
+          "description": "应该先用 dewbu tags search battery 探索可用标签"
+        },
+        {
+          "name": "provides_sample_size",
+          "type": "output_contains",
+          "description": "回答中必须包含样本规模数字"
+        },
+        {
+          "name": "includes_evidence",
+          "type": "output_contains",
+          "description": "回答中必须包含至少 2 条 evidence_id"
+        },
+        {
+          "name": "includes_original_text",
+          "type": "output_contains",
+          "description": "回答中必须包含原始评论文本片段"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "帮我分析一下猎人群体的用户画像，他们有什么特征、痛点和购买动机？",
+      "expected_output": "应该搜索 occupations=hunter 的 profile 和 evidence，构建画像总结。包含痛点、使用场景、购买动机等维度。",
+      "assertions": [
+        {
+          "name": "queries_hunter_profiles",
+          "type": "tool_usage",
+          "description": "应该查询 --occupations hunter 或 --query hunter"
+        },
+        {
+          "name": "multi_dimension_analysis",
+          "type": "output_structure",
+          "description": "回答应覆盖至少 3 个维度（痛点、使用场景、购买动机等）"
+        },
+        {
+          "name": "includes_evidence",
+          "type": "output_contains",
+          "description": "每个结论点至少附 1 条 evidence"
+        },
+        {
+          "name": "states_filter_conditions",
+          "type": "output_contains",
+          "description": "回答开头说明了过滤条件和样本规模"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "Amazon 4-5 星评论和 1-2 星评论中，用户关注的焦点有什么不同？",
+      "expected_output": "应该分别查询高星和低星的标签分布或 evidence，做对比分析。高星应该偏 strengths，低星偏 pain_points。",
+      "assertions": [
+        {
+          "name": "queries_both_star_ranges",
+          "type": "tool_usage",
+          "description": "应该分别查询 star-min 4 和 star-max 2 的数据"
+        },
+        {
+          "name": "comparative_structure",
+          "type": "output_structure",
+          "description": "回答应该有明确的对比结构（高星 vs 低星）"
+        },
+        {
+          "name": "includes_evidence_both_sides",
+          "type": "output_contains",
+          "description": "高星和低星各至少附 1 条 evidence"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "高消费用户（>$300）中有没有人抱怨过产品质量？他们的具体反馈是什么？",
+      "expected_output": "应该组合 spend-min 300 + pain_points/quality 相关搜索，找到高消费但有痛点的用户及其 evidence。",
+      "assertions": [
+        {
+          "name": "combines_spend_and_quality",
+          "type": "tool_usage",
+          "description": "应该组合消费金额过滤和质量相关搜索"
+        },
+        {
+          "name": "includes_specific_feedback",
+          "type": "output_contains",
+          "description": "回答包含具体的用户反馈原文"
+        },
+        {
+          "name": "includes_user_context",
+          "type": "output_contains",
+          "description": "回答包含用户的消费金额或订单信息作为上下文"
+        }
+      ]
+    }
+  ]
+}

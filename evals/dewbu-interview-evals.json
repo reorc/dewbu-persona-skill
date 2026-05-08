@@ -1,0 +1,76 @@
+{
+  "skill_name": "dewbu-interview",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "我想模拟一个猎人用户的访谈，了解他们对 Dewbu 加热夹克的真实感受",
+      "expected_output": "应该进入 setup 流程：查询 hunter 相关数据，构建 2-3 个候选 persona，展示给用户选择，询问是否开启 evidence 模式。",
+      "assertions": [
+        {
+          "name": "queries_hunter_data",
+          "type": "tool_usage",
+          "description": "应该查询 occupations=hunter 的 profile 和 evidence"
+        },
+        {
+          "name": "presents_persona_options",
+          "type": "output_structure",
+          "description": "应该展示 2-3 个候选 persona 供用户选择"
+        },
+        {
+          "name": "persona_has_data_backing",
+          "type": "output_contains",
+          "description": "每个 persona 应说明基于多少条 evidence 构建"
+        },
+        {
+          "name": "asks_evidence_preference",
+          "type": "output_contains",
+          "description": "应该询问用户是否要在对话中显示 evidence"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "帮我模拟一个高消费但对产品不满的用户，我想了解他们为什么还在买",
+      "expected_output": "应该查询 spend-min 高 + 有 pain_points 的用户，构建一个'高消费但有痛点'的矛盾型 persona。",
+      "assertions": [
+        {
+          "name": "queries_high_spend_with_pain",
+          "type": "tool_usage",
+          "description": "应该组合高消费 + 痛点搜索"
+        },
+        {
+          "name": "persona_reflects_contradiction",
+          "type": "output_structure",
+          "description": "persona 应该体现'花钱多但不满'的矛盾特征"
+        },
+        {
+          "name": "grounded_in_data",
+          "type": "output_contains",
+          "description": "persona 特征应该能追溯到具体数据"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "[接续 eval 1 选择 persona 后] 你平时什么时候穿这个夹克？冷到什么程度才会用加热功能？",
+      "expected_output": "应该以猎人 persona 身份回答，提到户外狩猎场景、具体温度、使用习惯。回答应基于该人群 evidence 中的真实描述。",
+      "assertions": [
+        {
+          "name": "first_person_voice",
+          "type": "output_style",
+          "description": "应该用第一人称回答（我、我的）"
+        },
+        {
+          "name": "specific_scenarios",
+          "type": "output_contains",
+          "description": "应该提到具体的使用场景（狩猎、户外工作等）"
+        },
+        {
+          "name": "consistent_with_data",
+          "type": "output_quality",
+          "description": "回答内容应该与该人群的实际 evidence 一致"
+        }
+      ]
+    }
+  ]
+}
