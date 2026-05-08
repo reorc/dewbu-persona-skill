@@ -1,0 +1,146 @@
+# Dewbu CLI 命令参考
+
+## 全局参数
+
+| 参数 | 默认值 | 说明 |
+|------|--------|------|
+| `--db` | `dewbu_persona_v2` | 数据库名 |
+| `--format` | `json` | 输出格式：json / table / csv |
+| `--limit` | `20` | 最大返回行数 |
+| `--offset` | `0` | 分页偏移 |
+| `--fields` | 全部 | 逗号分隔的返回字段 |
+
+---
+
+## dewbu sql \<query\>
+
+执行任意只读 SQL 查询（SELECT / WITH ... SELECT）。写操作会被拒绝。
+
+```bash
+dewbu sql "SELECT count(*) FROM evidence_index"
+dewbu sql "SELECT brand, count(*) FROM amazon_review_signals GROUP BY brand ORDER BY count(*) DESC"
+dewbu sql "SELECT tag_value, evidence_count FROM tag_dictionary WHERE dimension = 'pain_points' ORDER BY evidence_count DESC LIMIT 10"
+dewbu sql "WITH top_users AS (SELECT user_id, total_spend FROM user_profiles ORDER BY total_spend DESC LIMIT 5) SELECT * FROM top_users"
+```
+
+当预定义命令无法满足查询需求时，优先使用 `dewbu sql`。
+
+---
+
+## dewbu tags search \<keyword\>
+
+跨 tag_dictionary 和所有 `*_mapped` 列做子串搜索，帮助发现可用标签值。
+
+```bash
+dewbu tags search battery
+dewbu tags search gift
+dewbu tags search cold
+```
+
+返回两部分：
+- `dictionary`：tag_dictionary 中匹配的标签（含 dimension + evidence_count + user_count）
+- `usage`：evidence_index 各 `*_mapped` 列中实际使用的值 + 出现次数
+
+---
+
+## dewbu evidence search
+
+### 搜索模式
+
+| Flag | 搜索方式 | 适用场景 |
+|------|----------|----------|
+| `--query <keyword>` | 跨维度 ILIKE + FTS 分层搜索 | 不确定标签在哪个维度 |
+| `--pain-points <keyword>` | 只搜 pain_points_mapped（ILIKE） | 明确要搜痛点 |
+| `--strengths <keyword>` | 只搜 strengths_mapped（ILIKE） | 明确要搜优势 |
+| `--use-cases <keyword>` | 只搜 use_cases_mapped | 明确要搜使用场景 |
+| `--purchase-motivations <keyword>` | 只搜 purchase_motivations_mapped | 搜购买动机 |
+| `--occupations <keyword>` | 只搜 occupations_mapped | 搜职业 |
+| `--demographic <keyword>` | 只搜 demographic_signals_mapped | 搜人口统计 |
+
+### 结构化过滤
+
+| Flag | 说明 |
+|------|------|
+| `--source` | 来源：amazon_review / email / shopify_order / shopify_review |
+| `--star-min` / `--star-max` | 星级范围（1-5） |
+| `--country` | 国家 |
+| `--user` | 用户 ID 精确匹配 |
+
+### JSON Filter DSL
+
+```bash
+dewbu evidence search --filter '{
+  "source_type": "amazon_review",
+  "star": {"gte": 4},
+  "brand": "DEWBU",
+  "time": {"after": "2024-01-01"}
+}'
+```
+
+### 输出字段
+
+`match_tier`：1 = 标签命中（更精准），2 = FTS 原文命中
+`fts_rank`：FTS 相关性分数（tier 2 时有值）
+
+---
+
+## dewbu evidence get \<evidence_id\>
+
+获取单条 evidence 完整信息，含原文。
+
+```bash
+dewbu evidence get "evidence::amazon_review::review::https://www.amazon.com/gp/customer-reviews/R1IF9O7VQVGA6G"
+```
+
+---
+
+## dewbu profile search
+
+### 搜索模式
+
+与 evidence search 类似的维度 flag（`--query`, `--pain-points`, `--strengths` 等）。
+注意：profile 搜索的维度 flag 在 user_profiles 表的 `std_*` 列上做 ILIKE。
+
+### 额外过滤
+
+| Flag | 说明 |
+|------|------|
+| `--source` | 过滤 source_types 数组 |
+| `--spend-min` / `--spend-max` | 消费金额范围 |
+| `--order-min` | 最低订单数 |
+
+### 示例
+
+```bash
+dewbu profile search --query battery --limit 10
+dewbu profile search --spend-min 200 --pain-points battery
+dewbu profile search --occupations hunter --limit 20
+```
+
+---
+
+## dewbu profile schema
+
+返回可用过滤字段和标签枚举（从 tag_dictionary 动态统计）。
+
+```bash
+dewbu profile schema
+dewbu profile schema --dimension pain_points
+dewbu profile schema --dimension strengths
+```
+
+---
+
+## dewbu stats tags
+
+标签分布统计。
+
+```bash
+dewbu stats tags --group-by dimension
+dewbu stats tags --group-by tag --top 20
+```
+
+| 参数 | 说明 |
+|------|------|
+| `--group-by` | dimension（默认）或 tag |
+| `--top` | 返回 top N（默认 30） |

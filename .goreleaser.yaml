@@ -1,0 +1,55 @@
+version: 2
+
+project_name: dewbu
+dist: dist
+
+env:
+  - CGO_ENABLED=0
+
+builds:
+  - id: dewbu
+    binary: dewbu
+    main: ./cmd/dewbu
+    flags:
+      - -trimpath
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    ldflags:
+      - >-
+        -s -w
+        -X main.Version={{ .Version }}
+        -X main.GitCommit={{ .ShortCommit }}
+        -X main.BuildTime={{ .CommitDate }}
+
+archives:
+  - id: dewbu
+    ids:
+      - dewbu
+    formats:
+      - tar.gz
+    name_template: "dewbu_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files: []
+
+checksum:
+  name_template: "dewbu_{{ .Version }}_checksums.txt"
+  algorithm: sha256
+
+release:
+  github:
+    owner: reorc
+    name: dewbu-persona-skill
+  name_template: "dewbu {{ .Version }}"
+  make_latest: true
+  extra_files:
+    - glob: ./dist/dewbu-skills.tar.gz
+      name_template: dewbu-skills_{{ .Version }}.tar.gz
+    - glob: ./install.sh
+      name_template: install.sh
+
+changelog:
+  disable: true

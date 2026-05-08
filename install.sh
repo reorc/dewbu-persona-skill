@@ -2,40 +2,63 @@
 set -euo pipefail
 
 # Dewbu Persona Skill — Installer
-# Clones the repo and symlinks each skill into ~/.claude/skills and ~/.agents/skills
+# Downloads dewbu binary + skills from the latest GitHub Release.
 
-REPO_URL="https://github.com/reorc/dewbu-persona-skill.git"
-SOURCE_DIR="$HOME/.local/share/dewbu-persona-skill"
-SKILLS=(dewbu-persona dewbu-interview dewbu-shared)
+REPO="reorc/dewbu-persona-skill"
+INSTALL_DIR="${DEWBU_INSTALL_DIR:-$HOME/.local/bin}"
+SKILLS_DIRS=("$HOME/.claude/skills" "$HOME/.agents/skills")
 
-echo "==> Installing dewbu skills..."
+# Detect platform
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m)
+case "$ARCH" in
+  x86_64)  ARCH="amd64" ;;
+  aarch64) ARCH="arm64" ;;
+  arm64)   ARCH="arm64" ;;
+  *)       echo "Unsupported architecture: $ARCH"; exit 1 ;;
+esac
 
-# Clone or update source
-if [ -d "$SOURCE_DIR/.git" ]; then
-  echo "    Source exists, pulling latest..."
-  git -C "$SOURCE_DIR" pull --ff-only
-else
-  echo "    Cloning repo..."
-  rm -rf "$SOURCE_DIR"
-  git clone "$REPO_URL" "$SOURCE_DIR"
-fi
+echo "==> Detecting platform: ${OS}_${ARCH}"
 
-# Create skill directories
-mkdir -p "$HOME/.claude/skills" "$HOME/.agents/skills"
+# Get latest release tag
+echo "==> Fetching latest release..."
+LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+VERSION="${LATEST#v}"
+echo "    Version: ${LATEST}"
 
-# Symlink each skill
-for skill in "${SKILLS[@]}"; do
-  if [ -d "$SOURCE_DIR/$skill" ]; then
-    ln -sfn "$SOURCE_DIR/$skill" "$HOME/.claude/skills/$skill"
-    ln -sfn "$SOURCE_DIR/$skill" "$HOME/.agents/skills/$skill"
-    echo "    Linked: $skill"
-  else
-    echo "    Warning: $skill not found in repo, skipping"
-  fi
+# Download and install binary
+BINARY_URL="https://github.com/${REPO}/releases/download/${LATEST}/dewbu_${VERSION}_${OS}_${ARCH}.tar.gz"
+echo "==> Downloading dewbu binary..."
+mkdir -p "$INSTALL_DIR"
+curl -fsSL "$BINARY_URL" | tar -xz -C "$INSTALL_DIR" dewbu
+chmod +x "$INSTALL_DIR/dewbu"
+echo "    Installed: $INSTALL_DIR/dewbu"
+
+# Download and install skills
+SKILLS_URL="https://github.com/${REPO}/releases/download/${LATEST}/dewbu-skills_${VERSION}.tar.gz"
+echo "==> Downloading skills..."
+TMP_SKILLS=$(mktemp -d)
+curl -fsSL "$SKILLS_URL" | tar -xz -C "$TMP_SKILLS"
+
+for dir in "${SKILLS_DIRS[@]}"; do
+  mkdir -p "$dir"
+  for skill in "$TMP_SKILLS"/dewbu-*; do
+    skill_name=$(basename "$skill")
+    rm -rf "$dir/$skill_name"
+    cp -r "$skill" "$dir/$skill_name"
+    echo "    Installed skill: $dir/$skill_name"
+  done
 done
+rm -rf "$TMP_SKILLS"
 
 echo ""
-echo "==> Done! Skills installed:"
-ls -1 "$HOME/.claude/skills/" | grep "^dewbu-" | sed 's/^/    /'
+echo "==> Done! dewbu ${LATEST} installed."
+echo "    Binary: $INSTALL_DIR/dewbu"
+echo "    Skills: ${SKILLS_DIRS[*]}"
 echo ""
-echo "To update later: cd $SOURCE_DIR && git pull"
+
+# Check PATH
+if ! echo "$PATH" | tr ':' '\n' | grep -qx "$INSTALL_DIR"; then
+  echo "    Note: Add $INSTALL_DIR to your PATH:"
+  echo "    export PATH=\"$INSTALL_DIR:\$PATH\""
+fi
