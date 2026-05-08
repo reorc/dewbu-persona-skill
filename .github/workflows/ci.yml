@@ -1,0 +1,42 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Build
+        run: |
+          CGO_ENABLED=0 go build -o dewbu ./cmd/dewbu
+          ./dewbu version
+
+      - name: Cross-compile check
+        run: |
+          for os in darwin linux; do
+            for arch in amd64 arm64; do
+              echo "Building ${os}/${arch}..."
+              GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -o /dev/null ./cmd/dewbu
+            done
+          done
+
+      - name: Verify skills
+        run: |
+          for skill in skills/dewbu-*/SKILL.md; do
+            echo "OK: $skill"
+          done
