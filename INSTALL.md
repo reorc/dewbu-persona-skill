@@ -70,24 +70,51 @@ You should see the account info and `dewbu_persona_v2` listed.
 
 ---
 
-## Step 4: Install the Skill
+## Step 4: Install the Skills
 
-### Method 1: Git Clone (Recommended)
+本项目包含多个独立 skill（`dewbu-persona`、`dewbu-interview`、`dewbu-shared`），需要分别安装到 skills 目录，使每个 skill 都能被 Agent 工具独立识别。
+
+### Method 1: Git Clone + Symlink (Recommended)
+
+先 clone 到本地任意位置，再为每个 skill 创建 symlink：
 
 ```bash
+# Clone repo to a source location
+git clone https://github.com/reorc/dewbu-persona-skill.git ~/.local/share/dewbu-persona-skill
+
 # For Claude Code
-git clone https://github.com/reorc/dewbu-persona-skill.git ~/.claude/skills/dewbu-persona
+mkdir -p ~/.claude/skills
+ln -sf ~/.local/share/dewbu-persona-skill/dewbu-persona ~/.claude/skills/dewbu-persona
+ln -sf ~/.local/share/dewbu-persona-skill/dewbu-interview ~/.claude/skills/dewbu-interview
+ln -sf ~/.local/share/dewbu-persona-skill/dewbu-shared ~/.claude/skills/dewbu-shared
 
 # For OpenClaw / OpenCode / other Agents
-git clone https://github.com/reorc/dewbu-persona-skill.git ~/.agents/skills/dewbu-persona
+mkdir -p ~/.agents/skills
+ln -sf ~/.local/share/dewbu-persona-skill/dewbu-persona ~/.agents/skills/dewbu-persona
+ln -sf ~/.local/share/dewbu-persona-skill/dewbu-interview ~/.agents/skills/dewbu-interview
+ln -sf ~/.local/share/dewbu-persona-skill/dewbu-shared ~/.agents/skills/dewbu-shared
 ```
 
-### Method 2: Download ZIP
+### Method 2: One-liner Install Script
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/reorc/dewbu-persona-skill/main/install.sh)
+```
+
+### Method 3: Download ZIP
 
 ```bash
 curl -L https://github.com/reorc/dewbu-persona-skill/archive/refs/heads/main.zip -o /tmp/dewbu-persona.zip
-unzip /tmp/dewbu-persona.zip -d ~/.claude/skills/
-mv ~/.claude/skills/dewbu-persona-skill-main ~/.claude/skills/dewbu-persona
+unzip /tmp/dewbu-persona.zip -d /tmp/
+
+# Copy each skill individually
+mkdir -p ~/.claude/skills ~/.agents/skills
+for skill in dewbu-persona dewbu-interview dewbu-shared; do
+  cp -r /tmp/dewbu-persona-skill-main/$skill ~/.claude/skills/$skill
+  cp -r /tmp/dewbu-persona-skill-main/$skill ~/.agents/skills/$skill
+done
+
+rm -rf /tmp/dewbu-persona-skill-main /tmp/dewbu-persona.zip
 ```
 
 ---
@@ -95,8 +122,9 @@ mv ~/.claude/skills/dewbu-persona-skill-main ~/.claude/skills/dewbu-persona
 ## Updating
 
 ```bash
-cd ~/.claude/skills/dewbu-persona  # or ~/.agents/skills/dewbu-persona
+cd ~/.local/share/dewbu-persona-skill
 git pull
+# Symlinks automatically point to updated content — no extra steps needed
 ```
 
 ---
@@ -104,18 +132,27 @@ git pull
 ## Verification
 
 ```bash
+# Check skill structure
+ls ~/.claude/skills/dewbu-*/SKILL.md
+ls ~/.agents/skills/dewbu-*/SKILL.md
+
+# Test CLI
 dewbu tags search battery
 ```
 
-Should return JSON with tag matches from the database.
+Should see `SKILL.md` for each skill, and JSON tag matches from the database.
 
 ---
 
 ## Uninstallation
 
 ```bash
-# Remove skill
-rm -rf ~/.claude/skills/dewbu-persona
+# Remove skill symlinks/copies
+rm -rf ~/.claude/skills/dewbu-persona ~/.claude/skills/dewbu-interview ~/.claude/skills/dewbu-shared
+rm -rf ~/.agents/skills/dewbu-persona ~/.agents/skills/dewbu-interview ~/.agents/skills/dewbu-shared
+
+# Remove source repo
+rm -rf ~/.local/share/dewbu-persona-skill
 
 # Remove CLI
 rm ~/.local/bin/dewbu
