@@ -20,6 +20,7 @@ description: |
 4. **标签探索优先** — 不确定用什么标签时，先 `dewbu tags search <keyword>` 探索可用值
 5. **分层搜索** — 用 `--query` 做跨维度模糊搜索，用 `--pain-points` 等做精确维度搜索
 6. **灵活查询** — 预定义命令不够时，用 `dewbu sql` 执行任意 SELECT 查询
+7. **历史评论是背景信号** — `amazon_reviewer_history_signals` 用于理解 Amazon 用户长期兴趣、常买品类、评价习惯和生活方式，不能单独当作 Dewbu 产品反馈证据
 
 ## 工作流
 
@@ -42,7 +43,8 @@ description: |
 1. 识别目标人群的过滤条件
 2. dewbu profile search 获取画像数据
 3. dewbu evidence search 补充具体证据
-4. 输出画像总结（特征、痛点、动机、行为模式）+ evidence
+4. 如果问题涉及长期兴趣/平时买什么/生活方式，查询 amazon_reviewer_history_signals
+5. 输出画像总结（特征、痛点、动机、行为模式、历史兴趣）+ evidence
 ```
 
 ### Flow C: 证据追溯
@@ -64,6 +66,21 @@ description: |
 2. dewbu sql "<query>" 执行
 3. 解读结果
 ```
+
+### Flow E: 历史评论增强画像
+
+用户问"这类人平时还关注什么"、"猎人除了加热服还买什么"、"某类用户在 Amazon 上的长期兴趣"、"这些用户是不是挑剔"时使用。
+
+```
+1. 先用 user_profiles / evidence_index 圈定目标人群
+2. 只在需要历史背景时加入 user_profiles.history_review_count > 0
+3. JOIN amazon_reviewer_history_signals 按 product_brand / product_name / star / review_time / title / content 分析
+4. 输出时分开说明：
+   - Dewbu evidence：用于证明产品反馈、痛点、购买动机
+   - Amazon history：用于补充长期兴趣、品类偏好、评价习惯
+```
+
+历史评论标签未做 Dewbu 标准化，因为商品面很广。不要依赖历史表里的 `pain_points`、`use_cases` 等数组做精确统计；优先用商品名称、品牌、星级、标题、正文和时间做归纳，标签只作为弱辅助。
 
 ## 回答格式
 
@@ -138,6 +155,7 @@ dewbu stats tags --group-by dimension
 |----|------|------|
 | `evidence_index` | 统一检索层，所有 evidence | 10,478 |
 | `user_profiles` | 用户画像 | 10,291 |
+| `amazon_reviewer_history_signals` | Amazon 用户历史全量评论背景信号 | 26,936 |
 | `tag_dictionary` | 标签字典 | 215 |
 
 ### 6 个 evidence 检索维度
@@ -156,6 +174,53 @@ evidence_index 上有 6 个 `*_mapped` text[] 列：
 ### user_profiles 标准化维度
 
 user_profiles 上有 10 个 `std_*` text[] 列（包含上面 6 个维度 + 4 个额外维度）。
+
+另有 `history_review_count`，表示该用户是否抓到 Amazon 历史评论。`history_review_count > 0` 的用户可以联查 `amazon_reviewer_history_signals` 丰富画像。
+
+### Amazon 历史评论
+
+`amazon_reviewer_history_signals` 记录同一 Amazon reviewer 的历史评论，不限 Dewbu 产品。关键列：
+
+| 列名 | 含义 |
+|------|------|
+| `user_id` | 关联 user_profiles |
+| `source_review_id` / `source_signal_record_id` | 来源 Dewbu 评论/信号 |
+| `product_brand` / `product_name` | 历史评论商品品牌和名称 |
+| `star` | 历史评论星级 |
+| `review_time` | 评论时间 |
+| `title` / `content` | 历史评论标题和正文 |
+| `direct_review_url` | 评论链接 |
+
+典型问题："猎人群体除了加热服平时对哪些品类感兴趣？"
+
+```bash
+dewbu sql "WITH hunter_users AS (
+  SELECT user_id FROM user_profiles
+  WHERE history_review_count > 0
+    AND EXISTS (SELECT 1 FROM unnest(std_occupations) t WHERE t ILIKE '%hunter%')
+)
+SELECT h.product_brand, h.product_name, count(*) AS reviews, round(avg(h.star)::numeric, 2) AS avg_star
+FROM amazon_reviewer_history_signals h
+JOIN hunter_users u USING(user_id)
+GROUP BY h.product_brand, h.product_name
+ORDER BY reviews DESC
+LIMIT 30"
+```
+
+如果 occupation 标签不足，可先从 evidence 找到人群用户，再联查历史评论：
+
+```bash
+dewbu sql "WITH target_users AS (
+  SELECT DISTINCT user_id FROM evidence_index
+  WHERE user_id IS NOT NULL
+    AND EXISTS (SELECT 1 FROM unnest(occupations_mapped) t WHERE t ILIKE '%hunter%')
+)
+SELECT h.product_brand, h.product_name, h.star, h.title, left(h.content, 220) AS snippet
+FROM amazon_reviewer_history_signals h
+JOIN target_users u USING(user_id)
+ORDER BY h.review_time DESC NULLS LAST
+LIMIT 30"
+```
 
 ### 数据来源
 

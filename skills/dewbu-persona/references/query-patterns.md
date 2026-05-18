@@ -33,6 +33,24 @@ dewbu evidence search --occupations hunter --pain-points "" --limit 50
 dewbu stats tags --group-by tag --source amazon_review --top 20
 ```
 
+如果用户问目标人群"除了加热服还关注什么品类"、"平时还买什么"、"长期兴趣是什么"，用 Amazon 历史评论补充背景：
+
+```bash
+dewbu sql "WITH target_users AS (
+  SELECT user_id FROM user_profiles
+  WHERE history_review_count > 0
+    AND EXISTS (SELECT 1 FROM unnest(std_occupations) t WHERE t ILIKE '%hunter%')
+)
+SELECT h.product_brand, h.product_name, count(*) AS reviews, round(avg(h.star)::numeric, 2) AS avg_star
+FROM amazon_reviewer_history_signals h
+JOIN target_users u USING(user_id)
+GROUP BY h.product_brand, h.product_name
+ORDER BY reviews DESC
+LIMIT 30"
+```
+
+历史评论标签未标准化，商品面很广；分析品类兴趣时优先看 `product_name`、`product_brand`、`title`、`content` 和 `star`，不要把历史表里的标签当作标准分类。
+
 ## 模式 3：跨渠道对比
 
 ```bash
@@ -102,4 +120,11 @@ dewbu sql "SELECT e.title, e.content_snippet, u.total_spend FROM evidence_index 
 
 # 邮件平台分布
 dewbu sql "SELECT platform, count(*) FROM email_signals GROUP BY platform"
+
+# 某个用户的 Amazon 历史评论背景
+dewbu sql "SELECT product_brand, product_name, star, title, left(content, 220) AS snippet, review_time
+FROM amazon_reviewer_history_signals
+WHERE user_id = 'user::...'
+ORDER BY review_time DESC NULLS LAST
+LIMIT 20"
 ```
