@@ -32,6 +32,7 @@ Execute any read-only SQL (SELECT / WITH ... SELECT). Write operations are rejec
 dewbu sql "SELECT count(*) FROM evidence_index"
 dewbu sql "SELECT brand, count(*) FROM amazon_review_signals GROUP BY brand ORDER BY count(*) DESC"
 dewbu sql "SELECT tag_value, evidence_count FROM tag_dictionary WHERE dimension = 'pain_points' ORDER BY evidence_count DESC LIMIT 10"
+dewbu sql "SELECT count(*) FROM amazon_reviewer_history_signals"
 ```
 
 ### dewbu tags search \<keyword\>
@@ -117,6 +118,7 @@ source tables (spoke)          evidence_index (serving)     user_profiles (hub)
 ├── email_signals ──────────┼── 10,478 evidence ───────────┤
 ├── shopify_order_signals ──┤                              └── tag_dictionary (215 tags)
 └── shopify_review_signals ─┘
+amazon_reviewer_history_signals ── Amazon reviewer history background
 ```
 
 ### Key Tables
@@ -125,6 +127,7 @@ source tables (spoke)          evidence_index (serving)     user_profiles (hub)
 |-------|---------|------|
 | `evidence_index` | Unified search layer | 10,478 |
 | `user_profiles` | User personas | 10,291 |
+| `amazon_reviewer_history_signals` | Amazon reviewer history background | 26,936 |
 | `tag_dictionary` | Tag dictionary | 215 |
 
 ### 6 Evidence Dimensions (`*_mapped` text[] columns)
@@ -149,6 +152,16 @@ source tables (spoke)          evidence_index (serving)     user_profiles (hub)
 
 **Note:** user_profiles uses `std_*` prefix columns; evidence_index uses `*_mapped` suffix columns.
 
+### Amazon Reviewer History
+
+`amazon_reviewer_history_signals` contains historical Amazon reviews from reviewers linked to Dewbu users. Use it as background context for long-term interests, category affinity, brand exposure, and review habits.
+
+Important fields: `user_id`, `history_review_id`, `product_brand`, `product_name`, `star`, `review_time`, `title`, `content`, `direct_review_url`.
+
+`user_profiles.history_review_count > 0` means the user has history rows. Do not require this for all analysis; many useful Dewbu users have no history. Prefer it when the question asks about lifestyle, usual interests, "what else do they buy", or when building a richer interview persona.
+
+History review labels are not standardized across Dewbu dimensions because the product surface is broad. Treat history `pain_points`, `use_cases`, and similar arrays as weak hints; rely mainly on product names, brands, ratings, titles, and review text.
+
 ---
 
 ## Query Patterns
@@ -168,6 +181,22 @@ dewbu evidence search --pain-points <specific_tag> --source amazon_review  # Nar
 dewbu profile search --occupations hunter --limit 20
 dewbu evidence search --occupations hunter --limit 30
 dewbu stats tags --group-by tag --source amazon_review --top 20
+```
+
+When the user asks about non-Dewbu category interests, enrich with reviewer history:
+
+```bash
+dewbu sql "WITH target_users AS (
+  SELECT user_id FROM user_profiles
+  WHERE history_review_count > 0
+    AND EXISTS (SELECT 1 FROM unnest(std_occupations) t WHERE t ILIKE '%hunter%')
+)
+SELECT h.product_brand, h.product_name, count(*) AS reviews, round(avg(h.star)::numeric, 2) AS avg_star
+FROM amazon_reviewer_history_signals h
+JOIN target_users u USING(user_id)
+GROUP BY h.product_brand, h.product_name
+ORDER BY reviews DESC
+LIMIT 30"
 ```
 
 ### Pattern 3: Cross-Channel Comparison

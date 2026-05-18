@@ -18,6 +18,7 @@ description: |
 2. **保持人设一致** — 进入角色后，所有回答都从该 persona 视角出发
 3. **查询是为了贴合人设** — 对话中查询数据不是为了回答用户问题，而是确保回答符合这类人群的真实特征
 4. **用户可控** — 用户随时可以退出角色扮演，回到正常问答模式
+5. **历史评论增强但不强制** — Amazon 历史评论可用于补充生活方式和长期兴趣，但不能替代 Dewbu evidence，也不默认排除没有历史评论的用户
 
 ## 工作流
 
@@ -81,6 +82,25 @@ dewbu evidence search --query <keyword> --source <source> --limit 30
 dewbu stats tags --group-by tag --source <source> --top 20
 ```
 
+如果用户想聊的是生活方式、长期兴趣、平时还买什么、非 Dewbu 品类偏好，或者候选 persona 需要更立体，补充查询 Amazon 历史评论：
+
+```bash
+# 找有历史评论背景的候选用户
+dewbu sql "SELECT user_id, history_review_count, std_use_cases, std_occupations, std_pain_points
+FROM user_profiles
+WHERE history_review_count > 0
+  AND EXISTS (SELECT 1 FROM unnest(std_occupations) t WHERE t ILIKE '%<keyword>%')
+ORDER BY history_review_count DESC
+LIMIT 20"
+
+# 查看某个候选用户的历史评论背景
+dewbu sql "SELECT product_brand, product_name, star, title, left(content, 220) AS snippet, review_time
+FROM amazon_reviewer_history_signals
+WHERE user_id = '<user_id>'
+ORDER BY review_time DESC NULLS LAST
+LIMIT 20"
+```
+
 从查询结果中提炼 2-3 个有代表性的 persona。每个 persona 包含：
 
 | 字段 | 说明 |
@@ -90,7 +110,19 @@ dewbu stats tags --group-by tag --source <source> --top 20
 | 核心痛点 | 该人群最突出的 2-3 个痛点 |
 | 态度 | 对产品的整体态度（满意/中性/不满） |
 | 典型行为 | 购买频次、消费水平、渠道偏好 |
+| 历史背景 | 如有 `history_review_count > 0`，概括其 Amazon 历史评论中的常买品类、兴趣、评价习惯 |
 | 数据支撑 | 基于多少条 evidence，覆盖多少用户 |
+
+### 候选 persona 选择策略
+
+不要强制所有 persona 都来自 `history_review_count > 0` 的用户，否则会损失大量没有历史评论但有 Dewbu evidence 的样本。默认策略：
+
+- 至少保留 1 个"覆盖面代表型"：优先代表目标人群中样本量最大、Dewbu evidence 最充分的用户/聚类，不要求历史评论。
+- 如果有足够候选，加入 1 个"厚画像型"：`history_review_count > 0`，最好有 5 条以上历史评论，用于更立体的访谈。
+- 如果用户明确要"真实生活方式"、"平时还买什么"、"兴趣品类"、"像真人一样聊"，优先选择厚画像型。
+- 如果目标人群命中很少，先保证 Dewbu evidence 相关性，不因缺少历史评论而放弃。
+
+历史评论只用于补充 persona 的背景和语气，例如"我平时也会买户外工具、宠物用品、汽车配件"，不能用来编造该用户对 Dewbu 的产品体验。
 
 ### Step 3: 用户确认
 
@@ -100,8 +132,8 @@ dewbu stats tags --group-by tag --source <source> --top 20
 以上是基于 {N} 条 evidence 和 {M} 个用户画像构建的候选人设。
 
 请选择：
-1. [persona A 名称] — {一句话描述}
-2. [persona B 名称] — {一句话描述}
+1. [persona A 名称] — {一句话描述}（Dewbu evidence 充分，历史评论：{有/无}）
+2. [persona B 名称] — {一句话描述}（历史评论更丰富，覆盖 {history_review_count} 条 Amazon 历史评论）
 3. 自定义（告诉我你想调整什么）
 
 另外，你希望我在对话中：
@@ -144,6 +176,13 @@ dewbu evidence search --query <话题关键词> --pain-points <persona的核心�
 
 # 查该人群的具体使用场景
 dewbu evidence search --use-cases <场景关键词> --source <渠道> --limit 5
+
+# 查 persona 的长期兴趣和评价习惯
+dewbu sql "SELECT product_brand, product_name, star, title, left(content, 220) AS snippet
+FROM amazon_reviewer_history_signals
+WHERE user_id = '<persona_user_id>'
+ORDER BY review_time DESC NULLS LAST
+LIMIT 10"
 ```
 
 查询结果用于丰富回答细节，不直接暴露给用户（除非 evidence 模式开启）。
@@ -160,11 +199,21 @@ dewbu evidence search --use-cases <场景关键词> --source <渠道> --limit 5
 ---
 ```
 
+如果回答使用了历史评论背景，单独标注，避免和 Dewbu 产品证据混在一起：
+
+```
+---
+[背景信号]
+- amazon_history::<history_review_id> — "历史评论片段"
+---
+```
+
 ### 边界处理
 
 - 如果用户问的问题超出该 persona 的数据范围，诚实说"这个我不太确定"或"我没有这方面的经验"
 - 不要编造该人群数据中不存在的体验
 - 如果查询结果为空，可以说"我身边的人好像没怎么提过这个"
+- 历史评论覆盖面很广且标签未标准化，优先参考商品、品牌、星级、标题和正文；不要把历史评论标签当作强标准分类
 
 ---
 

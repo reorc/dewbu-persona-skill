@@ -12,6 +12,7 @@ source tables (spoke)          evidence_index (serving)     user_profiles (hub)
 ├── email_signals ──────────┼── 10,478 evidence ───────────┤
 ├── shopify_order_signals ──┤                              └── tag_dictionary (215 标签)
 └── shopify_review_signals ─┘
+amazon_reviewer_history_signals ── Amazon reviewer 历史评论背景信号
 ```
 
 ## evidence_index（核心检索表）
@@ -55,8 +56,39 @@ source tables (spoke)          evidence_index (serving)     user_profiles (hub)
 | product_names | text[] | 购买产品 |
 | inferred_gender | text | 推断性别 |
 | inferred_age_range | text | 推断年龄段 |
+| history_review_count | integer | 抓到的 Amazon 历史评论数，> 0 表示可联查历史评论 |
 
 **注意**: user_profiles 使用 `std_*` 前缀的列名，evidence_index 使用 `*_mapped` 后缀的列名。
+
+## amazon_reviewer_history_signals（Amazon 历史评论背景表）
+
+这个表记录与 Dewbu 用户关联的 Amazon reviewer 历史评论，不限 Dewbu 产品。它适合补充用户长期兴趣、常买品类、品牌接触、评论习惯和生活方式背景。
+
+| 列 | 类型 | 说明 |
+|----|------|------|
+| history_signal_id | text | 历史信号 ID |
+| history_review_id | text | 历史评论 ID |
+| reviewer_id | text | Amazon reviewer ID |
+| source_review_id | text | 来源评论 ID |
+| source_signal_record_id | text | 来源信号记录 ID |
+| user_id | text | 关联 user_profiles |
+| asin | text | Amazon ASIN |
+| product_brand | text | 商品品牌 |
+| product_name | text | 商品名称 |
+| star | integer | 星级 |
+| reviewed_country | text | 评论国家 |
+| review_time | timestamptz | 评论时间 |
+| title | text | 评论标题 |
+| content | text | 评论正文 |
+| direct_review_url | text | 评论链接 |
+| verified_purchase | boolean | 是否验证购买 |
+| pain_points / strengths / use_cases / purchase_motivations / occupations / demographic_signals | text[] | 历史评论抽取标签，未按 Dewbu 标准化 |
+
+**使用边界**:
+
+- 历史评论是背景信号，不是 Dewbu 产品反馈证据。
+- 由于商品面很广，历史标签不标准化；分析时优先使用 `product_brand`、`product_name`、`star`、`title`、`content`。
+- 不要默认要求 `history_review_count > 0`，除非用户问题涉及生活方式、平时兴趣、其他品类或需要更立体的访谈 persona。
 
 ## tag_dictionary（标签字典）
 
@@ -76,6 +108,8 @@ source tables (spoke)          evidence_index (serving)     user_profiles (hub)
 | email | 211 | 是 | 客服邮件（Shopify 159 + Amazon 52） |
 | shopify_order | 4,929 | 否 | 纯交易数据，无文本 |
 | shopify_review | 93 | 是 | Shopify 评论 |
+
+Amazon 历史评论背景表：`amazon_reviewer_history_signals` 26,936 条；`user_profiles.history_review_count > 0` 的用户 2,008 个。
 
 ## 标签维度分布
 
@@ -103,4 +137,17 @@ dewbu sql "SELECT tag_value, evidence_count FROM tag_dictionary WHERE dimension 
 dewbu sql "SELECT e.source_type, e.title, e.content_snippet, u.total_spend
 FROM evidence_index e JOIN user_profiles u USING(user_id)
 WHERE u.total_spend > 500 LIMIT 10"
+
+# 猎人群体的 Amazon 历史评论品类/品牌兴趣
+dewbu sql "WITH hunter_users AS (
+  SELECT user_id FROM user_profiles
+  WHERE history_review_count > 0
+    AND EXISTS (SELECT 1 FROM unnest(std_occupations) t WHERE t ILIKE '%hunter%')
+)
+SELECT h.product_brand, h.product_name, count(*) AS reviews, round(avg(h.star)::numeric, 2) AS avg_star
+FROM amazon_reviewer_history_signals h
+JOIN hunter_users u USING(user_id)
+GROUP BY h.product_brand, h.product_name
+ORDER BY reviews DESC
+LIMIT 30"
 ```
