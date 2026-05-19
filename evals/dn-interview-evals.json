@@ -1,0 +1,17 @@
+{
+  "skill_name": "dn-interview",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "我想模拟一个 DN 高消费复购用户，跟他聊为什么愿意买。",
+      "expected_output": "Builds 2-3 candidate personas from dn_user_profiles and dn_evidence_index before roleplay, with user choice and optional evidence mode.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "假装你是某个在 TikTok 评论里嫌价格贵的人，我想访谈一下。",
+      "expected_output": "Queries TikTok video comment evidence about price, creates a data-backed persona, and roleplays only after establishing source evidence.",
+      "files": []
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "skill_name": "dn-persona",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "DN 数据里用户最常见的联系意图是什么？给我样本规模和 evidence。",
+      "expected_output": "Uses dn_persona via db9 SQL, queries dn_tag_dictionary or dn_evidence_index, reports sample size, and includes evidence IDs/snippets where available.",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "帮我看 TikTok 评论里提到价格的人主要在抱怨什么。",
+      "expected_output": "Filters tiktok_video_comment evidence for price-related text/tags, separates comments from order/video metrics, and supports conclusions with evidence.",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "DN 高消费用户画像是什么？",
+      "expected_output": "Queries dn_user_profiles with numeric casting for total_spend, then retrieves representative evidence from dn_evidence_index and summarizes product interests, pain points, and commercial signals.",
+      "files": []
+    }
+  ]
+}
