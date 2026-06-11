@@ -112,7 +112,19 @@ dewbu stats tags --group-by tag --top 20
 
 **Database:** `dewbu_persona_v2`
 
-Use the `dewbu` CLI for queries. The CLI may be backed by db9 or by the Dewbu HTTP API depending on local configuration (`DEWBU_BACKEND`). Do not call `db9` directly for Dewbu queries unless the user explicitly asks for the db9 backend.
+Use the `dewbu` CLI for queries. The CLI uses the Dewbu HTTP API by default, with credentials stored in `~/.dewbu/config.json`. Do not call the database backend directly for Dewbu queries.
+
+Onboarding:
+
+1. Open `https://dewbu-persona.tool.reorc.cloud/`
+2. Go to `Admin` -> `Accounts`
+3. Open `More` -> `API keys` for an active admin account
+4. Generate a key, copy it once, then configure the CLI
+
+```bash
+dewbu config set --backend http --svc-base-url https://dewbu-persona.tool.reorc.cloud/ --api-key dewbu_live_xxx
+dewbu config show
+```
 
 ```
 source tables (spoke)          evidence_index (serving)     user_profiles (hub)

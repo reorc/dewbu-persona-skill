@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -33,10 +35,18 @@ type Config struct {
 }
 
 var config = Config{
-	Backend: getenv("DEWBU_BACKEND", "db9"),
+	Backend: getenv("DEWBU_BACKEND", "http"),
 	APIURL:  os.Getenv("DEWBU_API_BASE_URL"),
 	APIKey:  os.Getenv("DEWBU_API_KEY"),
 	Timeout: 30 * time.Second,
+}
+
+type fileConfig struct {
+	Backend        string `json:"backend,omitempty"`
+	SvcBaseURL     string `json:"svc_base_url,omitempty"`
+	APIBaseURL     string `json:"api_base_url,omitempty"`
+	APIKey         string `json:"api_key,omitempty"`
+	TimeoutSeconds int    `json:"timeout_seconds,omitempty"`
 }
 
 func Configure(cfg Config) {
@@ -54,6 +64,82 @@ func Configure(cfg Config) {
 	}
 }
 
+func DefaultConfigPath() string {
+	if path := strings.TrimSpace(os.Getenv("DEWBU_CONFIG")); path != "" {
+		return path
+	}
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return filepath.Join(".dewbu", "config.json")
+	}
+	return filepath.Join(home, ".dewbu", "config.json")
+}
+
+func LoadConfigFile(path string) (Config, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return Config{}, err
+	}
+
+	var raw fileConfig
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return Config{}, fmt.Errorf("parse config %s: %w", path, err)
+	}
+
+	apiURL := strings.TrimSpace(raw.SvcBaseURL)
+	if apiURL == "" {
+		apiURL = strings.TrimSpace(raw.APIBaseURL)
+	}
+	cfg := Config{
+		Backend: strings.TrimSpace(raw.Backend),
+		APIURL:  apiURL,
+		APIKey:  strings.TrimSpace(raw.APIKey),
+	}
+	if raw.TimeoutSeconds > 0 {
+		cfg.Timeout = time.Duration(raw.TimeoutSeconds) * time.Second
+	}
+	if cfg.Backend == "" && cfg.APIURL != "" && cfg.APIKey != "" {
+		cfg.Backend = "http"
+	}
+	return cfg, nil
+}
+
+func LoadDefaultConfigFile() (Config, error) {
+	path := DefaultConfigPath()
+	cfg, err := LoadConfigFile(path)
+	if os.IsNotExist(err) {
+		return Config{}, nil
+	}
+	return cfg, err
+}
+
+func SaveConfigFile(path string, cfg Config) error {
+	if cfg.Backend == "" && cfg.APIURL != "" && cfg.APIKey != "" {
+		cfg.Backend = "http"
+	}
+	raw := fileConfig{
+		Backend:    cfg.Backend,
+		SvcBaseURL: cfg.APIURL,
+		APIKey:     cfg.APIKey,
+	}
+	if cfg.Timeout > 0 {
+		raw.TimeoutSeconds = int(cfg.Timeout / time.Second)
+	}
+	data, err := json.MarshalIndent(raw, "", "  ")
+	if err != nil {
+		return err
+	}
+	data = append(data, '\n')
+	if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0600)
+}
+
+func CurrentConfig() Config {
+	return config
+}
+
 // ColumnNames returns just the column name strings.
 func (r *QueryResult) ColumnNames() []string {
 	names := make([]string, len(r.Columns))
@@ -66,7 +152,7 @@ func (r *QueryResult) ColumnNames() []string {
 // Query executes a SQL query against db9 and returns raw result.
 func Query(database, sql string) (*QueryResult, error) {
 	switch strings.ToLower(strings.TrimSpace(config.Backend)) {
-	case "", "db9":
+	case "db9":
 		return queryDB9(database, sql)
 	case "http", "api":
 		return queryHTTP(database, sql)
@@ -96,12 +182,12 @@ func queryDB9(database, sql string) (*QueryResult, error) {
 
 func queryHTTP(database, sql string) (*QueryResult, error) {
 	if config.APIURL == "" {
-		return nil, fmt.Errorf("DEWBU_API_BASE_URL is required when DEWBU_BACKEND=http")
+		return nil, fmt.Errorf("svc_base_url is required when backend=http")
 	}
 	if config.APIKey == "" {
-		return nil, fmt.Errorf("DEWBU_API_KEY is required when DEWBU_BACKEND=http")
+		return nil, fmt.Errorf("api_key is required when backend=http")
 	}
-	endpoint := strings.TrimRight(config.APIURL, "/") + "/v1/query"
+	endpoint := queryEndpoint(config.APIURL)
 	body, err := json.Marshal(map[string]string{
 		"database": database,
 		"sql":      sql,
@@ -135,6 +221,21 @@ func queryHTTP(database, sql string) (*QueryResult, error) {
 		return nil, fmt.Errorf("failed to parse http backend JSON output: %w", err)
 	}
 	return &result, nil
+}
+
+func queryEndpoint(baseURL string) string {
+	trimmed := strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	if strings.HasSuffix(trimmed, "/v1/query") {
+		return trimmed
+	}
+	if strings.HasSuffix(trimmed, "/api/cli") {
+		return trimmed + "/v1/query"
+	}
+	parsed, err := url.Parse(trimmed)
+	if err == nil && (parsed.Path == "" || parsed.Path == "/") {
+		return trimmed + "/api/cli/v1/query"
+	}
+	return trimmed + "/v1/query"
 }
 
 // QueryRows executes SQL and returns results as []map[string]interface{}.

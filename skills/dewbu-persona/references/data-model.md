@@ -2,7 +2,7 @@
 
 ## 数据库
 
-`dewbu_persona_v2` (db9, ID: `7v8y5zjmt8vi`)
+`dewbu_persona_v2`，通过 `dewbu` CLI 查询；默认使用 Dewbu HTTP API，本地配置保存在 `~/.dewbu/config.json`。
 
 ## 架构
 
