@@ -4,7 +4,7 @@ version: 1.0.0
 description: "Shared Dewbu guidance for CLI usage, data model, query patterns, and conventions. Read this before using any Dewbu skill."
 metadata:
   requires:
-    bins: ["dewbu", "db9"]
+    bins: ["dewbu"]
   cliHelp: "dewbu --help"
 ---
 
@@ -110,7 +110,21 @@ dewbu stats tags --group-by tag --top 20
 
 ## Data Model
 
-**Database:** `dewbu_persona_v2` (db9)
+**Database:** `dewbu_persona_v2`
+
+Use the `dewbu` CLI for queries. The CLI uses the Dewbu HTTP API by default, with credentials stored in `~/.dewbu/config.json`. Do not call the database backend directly for Dewbu queries.
+
+Onboarding:
+
+1. Open `https://dewbu-persona.tool.reorc.cloud/`
+2. Go to `Admin` -> `Accounts`
+3. Open `More` -> `API keys` for an active admin account
+4. Generate a key, copy it once, then configure the CLI
+
+```bash
+dewbu config set --backend http --svc-base-url https://dewbu-persona.tool.reorc.cloud/ --api-key dewbu_live_xxx
+dewbu config show
+```
 
 ```
 source tables (spoke)          evidence_index (serving)     user_profiles (hub)

@@ -9,6 +9,15 @@
 | `--limit` | `20` | 最大返回行数 |
 | `--offset` | `0` | 分页偏移 |
 | `--fields` | 全部 | 逗号分隔的返回字段 |
+| `--backend` | `http` | 查询后端 |
+| `--svc-base-url` | config/env | HTTP 服务地址，例如 `https://dewbu-persona.tool.reorc.cloud/` |
+
+本地 HTTP 后端配置保存在 `~/.dewbu/config.json`。先在 Dewbu webapp 的 `Admin` -> `Accounts` -> `More` -> `API keys` 里生成 API key，再粘贴到 CLI：
+
+```bash
+dewbu config set --backend http --svc-base-url https://dewbu-persona.tool.reorc.cloud/ --api-key dewbu_live_xxx
+dewbu config show
+```
 
 ---
 

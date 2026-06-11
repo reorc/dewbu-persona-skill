@@ -3,7 +3,9 @@ package cli
 import (
 	"fmt"
 	"os"
+	"time"
 
+	"github.com/reorc/dewbu-persona-skill/internal/db"
 	"github.com/spf13/cobra"
 )
 
@@ -13,6 +15,9 @@ var (
 	limit    int
 	offset   int
 	fields   string
+	backend  string
+	apiURL   string
+	apiKey   string
 )
 
 var (
@@ -25,6 +30,20 @@ var rootCmd = &cobra.Command{
 	Use:   "dewbu",
 	Short: "Dewbu Persona query CLI",
 	Long:  "Query user profiles, evidence, and tag statistics from the Dewbu Persona database.",
+	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+		fileConfig, err := db.LoadDefaultConfigFile()
+		if err != nil {
+			return err
+		}
+		db.Configure(fileConfig)
+		db.Configure(db.Config{
+			Backend: backend,
+			APIURL:  apiURL,
+			APIKey:  apiKey,
+			Timeout: 30 * time.Second,
+		})
+		return nil
+	},
 }
 
 var versionCmd = &cobra.Command{
@@ -64,4 +83,8 @@ func init() {
 	rootCmd.PersistentFlags().IntVar(&limit, "limit", 20, "max rows to return")
 	rootCmd.PersistentFlags().IntVar(&offset, "offset", 0, "offset for pagination")
 	rootCmd.PersistentFlags().StringVar(&fields, "fields", "", "comma-separated fields to return")
+	rootCmd.PersistentFlags().StringVar(&backend, "backend", os.Getenv("DEWBU_BACKEND"), "query backend (default: http)")
+	rootCmd.PersistentFlags().StringVar(&apiURL, "api-url", os.Getenv("DEWBU_API_BASE_URL"), "HTTP backend base URL")
+	rootCmd.PersistentFlags().StringVar(&apiURL, "svc-base-url", os.Getenv("DEWBU_API_BASE_URL"), "HTTP backend service base URL")
+	rootCmd.PersistentFlags().StringVar(&apiKey, "api-key", os.Getenv("DEWBU_API_KEY"), "HTTP backend API key")
 }
