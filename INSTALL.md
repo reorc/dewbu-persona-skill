@@ -2,16 +2,30 @@
 
 ## Prerequisites
 
-- [db9 CLI](https://db9.ai/skill.md) installed and authenticated
-- A db9 API key with access to `dewbu_persona_v2`
+Use one query backend:
 
-### Install db9
+- db9 backend: [db9 CLI](https://db9.ai/skill.md) installed and authenticated, with access to `dewbu_persona_v2`
+- HTTP backend: Dewbu Persona API URL and API key
+
+### Option A: Install db9
 
 ```bash
 curl -fsSL https://db9.ai/install | sh
 db9 login --api-key <YOUR_API_KEY>
 db9 status  # should show dewbu_persona_v2
 ```
+
+### Option B: Use Dewbu HTTP API
+
+```bash
+export DEWBU_BACKEND=http
+export DEWBU_API_BASE_URL=https://your-api.example.com
+export DEWBU_API_KEY=dewbu_live_xxx
+
+dewbu sql "SELECT count(*) FROM evidence_index"
+```
+
+Prefer environment variables for `DEWBU_API_KEY`; avoid passing keys directly on the command line.
 
 ---
 

@@ -4,7 +4,7 @@ version: 1.0.0
 description: "Shared Dewbu guidance for CLI usage, data model, query patterns, and conventions. Read this before using any Dewbu skill."
 metadata:
   requires:
-    bins: ["dewbu", "db9"]
+    bins: ["dewbu"]
   cliHelp: "dewbu --help"
 ---
 
@@ -110,7 +110,9 @@ dewbu stats tags --group-by tag --top 20
 
 ## Data Model
 
-**Database:** `dewbu_persona_v2` (db9)
+**Database:** `dewbu_persona_v2`
+
+Use the `dewbu` CLI for queries. The CLI may be backed by db9 or by the Dewbu HTTP API depending on local configuration (`DEWBU_BACKEND`). Do not call `db9` directly for Dewbu queries unless the user explicitly asks for the db9 backend.
 
 ```
 source tables (spoke)          evidence_index (serving)     user_profiles (hub)
