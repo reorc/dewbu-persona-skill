@@ -41,16 +41,16 @@ var (
 	evUser       string
 	evQuery      string
 	// Dimension-level ILIKE flags
-	evPainPoints    string
-	evStrengths     string
-	evUseCases      string
-	evPurchaseMot   string
-	evOccupations   string
-	evDemographic   string
-	evProdInterest  string
-	evCustStage     string
-	evContactInt    string
-	evCommValue     string
+	evPainPoints   string
+	evStrengths    string
+	evUseCases     string
+	evPurchaseMot  string
+	evOccupations  string
+	evDemographic  string
+	evProdInterest string
+	evCustStage    string
+	evContactInt   string
+	evCommValue    string
 )
 
 func init() {
@@ -85,6 +85,11 @@ func runEvidenceSearch(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
+	tieredQuery := ""
+	if evQuery != "" && evFilterJSON == "" {
+		tieredQuery = evQuery
+		f.Query = ""
+	}
 	where := f.ToEvidenceSQL()
 
 	// Add dimension-level ILIKE filters
@@ -98,8 +103,8 @@ func runEvidenceSearch(cmd *cobra.Command, args []string) error {
 	}
 
 	// If --query is set, use tiered search (tag ILIKE + FTS)
-	if evQuery != "" && evFilterJSON == "" {
-		return runTieredSearch(where, evQuery)
+	if tieredQuery != "" {
+		return runTieredSearch(where, tieredQuery)
 	}
 
 	// Standard search (no --query, or --query via JSON filter which uses FTS only)
