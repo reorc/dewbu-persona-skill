@@ -27,9 +27,9 @@ var (
 )
 
 var rootCmd = &cobra.Command{
-	Use:   "dewbu",
-	Short: "Dewbu Persona query CLI",
-	Long:  "Query user profiles, evidence, and tag statistics from the Dewbu Persona database.",
+	Use:   "voc",
+	Short: "VOC persona analytics CLI",
+	Long:  "Query user profiles, evidence, personas, and tag statistics from a configured VOC analytics deployment.",
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		fileConfig, err := db.LoadDefaultConfigFile()
 		if err != nil {
@@ -50,7 +50,7 @@ var versionCmd = &cobra.Command{
 	Use:   "version",
 	Short: "Print version information",
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Printf("dewbu %s\n", version)
+		fmt.Printf("voc %s\n", version)
 		if buildTime != "" {
 			fmt.Printf("  built: %s\n", buildTime)
 		}
@@ -82,14 +82,24 @@ func init() {
 	rootCmd.PersistentFlags().IntVar(&limit, "limit", 20, "max rows to return")
 	rootCmd.PersistentFlags().IntVar(&offset, "offset", 0, "offset for pagination")
 	rootCmd.PersistentFlags().StringVar(&fields, "fields", "", "comma-separated fields to return")
-	rootCmd.PersistentFlags().StringVar(&apiURL, "api-url", os.Getenv("DEWBU_API_BASE_URL"), "API base URL")
-	rootCmd.PersistentFlags().StringVar(&apiURL, "svc-base-url", os.Getenv("DEWBU_API_BASE_URL"), "API service base URL")
-	rootCmd.PersistentFlags().StringVar(&apiKey, "api-key", os.Getenv("DEWBU_API_KEY"), "API key")
+	apiURLDefault := firstEnv("VOC_API_BASE_URL", "DEWBU_API_BASE_URL")
+	rootCmd.PersistentFlags().StringVar(&apiURL, "api-url", apiURLDefault, "API base URL")
+	rootCmd.PersistentFlags().StringVar(&apiURL, "svc-base-url", apiURLDefault, "API service base URL")
+	rootCmd.PersistentFlags().StringVar(&apiKey, "api-key", firstEnv("VOC_API_KEY", "DEWBU_API_KEY"), "API key")
 
 	// Deprecated, ignored — the deployment (svc_base_url + api_key) determines
 	// the brand/database. Kept hidden so older invocations don't break.
 	rootCmd.PersistentFlags().StringVar(&database, "db", "", "deprecated, ignored")
-	rootCmd.PersistentFlags().StringVar(&backend, "backend", os.Getenv("DEWBU_BACKEND"), "deprecated, ignored — HTTP is the only backend")
+	rootCmd.PersistentFlags().StringVar(&backend, "backend", firstEnv("VOC_BACKEND", "DEWBU_BACKEND"), "deprecated, ignored — HTTP is the only backend")
 	_ = rootCmd.PersistentFlags().MarkHidden("db")
 	_ = rootCmd.PersistentFlags().MarkHidden("backend")
+}
+
+func firstEnv(keys ...string) string {
+	for _, key := range keys {
+		if value := os.Getenv(key); value != "" {
+			return value
+		}
+	}
+	return ""
 }

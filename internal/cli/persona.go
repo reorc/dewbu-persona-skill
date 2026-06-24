@@ -94,7 +94,7 @@ func describeError(err error) error {
 	if apiErr, ok := err.(*db.APIError); ok {
 		switch apiErr.Status {
 		case http.StatusUnauthorized:
-			return fmt.Errorf("unauthorized (401): check your API key — run `dewbu config show`")
+			return fmt.Errorf("unauthorized (401): check your API key — run `voc config show`")
 		case http.StatusForbidden:
 			return fmt.Errorf("forbidden (403): %s — this operation needs an admin API key", apiErr.Message)
 		case http.StatusNotFound:
