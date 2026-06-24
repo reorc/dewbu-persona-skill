@@ -4,8 +4,8 @@ version: 1.0.0
 description: "Shared Dewbu guidance for CLI usage, data model, query patterns, and conventions. Read this before using any Dewbu skill."
 metadata:
   requires:
-    bins: ["dewbu"]
-  cliHelp: "dewbu --help"
+    bins: ["voc"]
+  cliHelp: "voc --help"
 ---
 
 # Dewbu Shared Guide
@@ -25,29 +25,29 @@ Read this before using any Dewbu skill. It covers the CLI commands, data model, 
 
 > The brand/database is determined by the configured deployment (`svc_base_url` + `api_key`) — there is no brand or database selection flag.
 
-### dewbu sql \<query\>
+### voc sql \<query\>
 
 Execute any read-only SQL (SELECT / WITH ... SELECT). Write operations are rejected.
 
 ```bash
-dewbu sql "SELECT count(*) FROM evidence_index"
-dewbu sql "SELECT brand, count(*) FROM amazon_review_signals GROUP BY brand ORDER BY count(*) DESC"
-dewbu sql "SELECT tag_value, evidence_count FROM tag_dictionary WHERE dimension = 'pain_points' ORDER BY evidence_count DESC LIMIT 10"
-dewbu sql "SELECT count(*) FROM amazon_reviewer_history_signals"
+voc sql "SELECT count(*) FROM evidence_index"
+voc sql "SELECT brand, count(*) FROM amazon_review_signals GROUP BY brand ORDER BY count(*) DESC"
+voc sql "SELECT tag_value, evidence_count FROM tag_dictionary WHERE dimension = 'pain_points' ORDER BY evidence_count DESC LIMIT 10"
+voc sql "SELECT count(*) FROM amazon_reviewer_history_signals"
 ```
 
-### dewbu tags search \<keyword\>
+### voc tags search \<keyword\>
 
 Search tag_dictionary and all `*_mapped` columns for substring matches.
 
 ```bash
-dewbu tags search battery
-dewbu tags search gift
+voc tags search battery
+voc tags search gift
 ```
 
 Returns: `dictionary` (tag_dictionary matches with dimension + counts) and `usage` (actual values in evidence_index `*_mapped` columns + counts).
 
-### dewbu evidence search
+### voc evidence search
 
 **Search modes:**
 
@@ -72,15 +72,15 @@ Returns: `dictionary` (tag_dictionary matches with dimension + counts) and `usag
 
 **Output:** `match_tier=1` = tag hit (precise), `match_tier=2` = FTS full-text hit.
 
-### dewbu evidence get \<evidence_id\>
+### voc evidence get \<evidence_id\>
 
 Get full evidence detail including original text.
 
 ```bash
-dewbu evidence get "evidence::amazon_review::review::R1IF9O7VQVGA6G"
+voc evidence get "evidence::amazon_review::review::R1IF9O7VQVGA6G"
 ```
 
-### dewbu profile search
+### voc profile search
 
 Same dimension flags as evidence search, but searches `std_*` columns on user_profiles.
 
@@ -93,21 +93,21 @@ Same dimension flags as evidence search, but searches `std_*` columns on user_pr
 | `--order-min` | Minimum order count |
 
 ```bash
-dewbu profile search --query battery --limit 10
-dewbu profile search --spend-min 200 --pain-points battery
-dewbu profile search --occupations hunter --limit 20
+voc profile search --query battery --limit 10
+voc profile search --spend-min 200 --pain-points battery
+voc profile search --occupations hunter --limit 20
 ```
 
-### dewbu stats tags
+### voc stats tags
 
 Tag distribution statistics.
 
 ```bash
-dewbu stats tags --group-by dimension
-dewbu stats tags --group-by tag --top 20
+voc stats tags --group-by dimension
+voc stats tags --group-by tag --top 20
 ```
 
-### dewbu persona (manage saved personas)
+### voc persona (manage saved personas)
 
 Manage saved personas. **Permissions follow your API key**: a read-only (user)
 key can `list` / `get`; create / update / delete / build require an **admin**
@@ -115,23 +115,23 @@ key. A read-only key attempting a write returns `403 — needs an admin API key`
 
 ```bash
 # read-only (any key)
-dewbu persona list
-dewbu persona get <persona_id>
+voc persona list
+voc persona get <persona_id>
 
 # writes (admin key only)
-dewbu persona create --name "Hunters" \
+voc persona create --name "Hunters" \
   --description "Cold-weather hunting users" \
   --filter '{"occupations":["hunter"],"stars":[1,2]}'
-dewbu persona update <persona_id> --name "Hunters v2" --filter '{"stars":[1,2,3]}'
-dewbu persona build  <persona_id>   # recompute cached profile/stats
-dewbu persona delete <persona_id>
+voc persona update <persona_id> --name "Hunters v2" --filter '{"stars":[1,2,3]}'
+voc persona build  <persona_id>   # recompute cached profile/stats
+voc persona delete <persona_id>
 ```
 
 `--filter` is a persona filter config JSON object (same shape the webapp uses):
 `brands`, `platforms`, `stars`, `countries`, `timeStart`, `timeEnd`, `tags`
 (`[{"dimension","values"}]`), `gender`, `ageRange`, `spendRange`,
 `orderCountRange`, `sourceTypes`. Editing the filter clears the cached profile —
-run `dewbu persona build <id>` afterwards to refresh stats.
+run `voc persona build <id>` afterwards to refresh stats.
 
 ---
 
@@ -139,7 +139,7 @@ run `dewbu persona build <id>` afterwards to refresh stats.
 
 **Database:** `dewbu_persona_v2`
 
-Use the `dewbu` CLI for queries. The CLI uses the Dewbu HTTP API by default, with credentials stored in `~/.dewbu/config.json`. Do not call the database backend directly for Dewbu queries.
+Use the `voc` CLI for queries. The CLI uses the Dewbu HTTP API by default, with credentials stored in `~/.voc/config.json`. Do not call the database backend directly for Dewbu queries.
 
 Onboarding:
 
@@ -150,8 +150,8 @@ Onboarding:
 4. Generate a key, copy it once, then configure the CLI
 
 ```bash
-dewbu config set --svc-base-url https://dewbu-persona.tool.reorc.cloud/ --api-key dewbu_live_xxx
-dewbu config show
+voc config set --svc-base-url https://dewbu-persona.tool.reorc.cloud/ --api-key dewbu_live_xxx
+voc config show
 ```
 
 ```
@@ -211,24 +211,24 @@ History review labels are not standardized across Dewbu dimensions because the p
 ### Pattern 1: Fuzzy to Precise
 
 ```bash
-dewbu tags search <keyword>           # Explore available tags
-dewbu stats tags --group-by tag       # See distribution
-dewbu evidence search --query <kw>    # Broad search
-dewbu evidence search --pain-points <specific_tag> --source amazon_review  # Narrow
+voc tags search <keyword>           # Explore available tags
+voc stats tags --group-by tag       # See distribution
+voc evidence search --query <kw>    # Broad search
+voc evidence search --pain-points <specific_tag> --source amazon_review  # Narrow
 ```
 
 ### Pattern 2: Persona Building
 
 ```bash
-dewbu profile search --occupations hunter --limit 20
-dewbu evidence search --occupations hunter --limit 30
-dewbu stats tags --group-by tag --source amazon_review --top 20
+voc profile search --occupations hunter --limit 20
+voc evidence search --occupations hunter --limit 30
+voc stats tags --group-by tag --source amazon_review --top 20
 ```
 
 When the user asks about non-Dewbu category interests, enrich with reviewer history:
 
 ```bash
-dewbu sql "WITH target_users AS (
+voc sql "WITH target_users AS (
   SELECT user_id FROM user_profiles
   WHERE history_review_count > 0
     AND EXISTS (SELECT 1 FROM unnest(std_occupations) t WHERE t ILIKE '%hunter%')
@@ -244,36 +244,36 @@ LIMIT 30"
 ### Pattern 3: Cross-Channel Comparison
 
 ```bash
-dewbu evidence search --query <kw> --source amazon_review --limit 10
-dewbu evidence search --query <kw> --source email --limit 10
+voc evidence search --query <kw> --source amazon_review --limit 10
+voc evidence search --query <kw> --source email --limit 10
 ```
 
 ### Pattern 4: Star Rating Analysis
 
 ```bash
-dewbu evidence search --query <kw> --star-min 1 --star-max 2 --limit 20  # Low stars
-dewbu evidence search --query <kw> --star-min 4 --limit 20               # High stars
+voc evidence search --query <kw> --star-min 1 --star-max 2 --limit 20  # Low stars
+voc evidence search --query <kw> --star-min 4 --limit 20               # High stars
 ```
 
 ### Pattern 5: High-Value Users
 
 ```bash
-dewbu profile search --spend-min 500 --limit 20
-dewbu profile search --order-min 3 --limit 20
-dewbu profile search --spend-min 200 --pain-points battery --limit 10
+voc profile search --spend-min 500 --limit 20
+voc profile search --order-min 3 --limit 20
+voc profile search --spend-min 200 --pain-points battery --limit 10
 ```
 
 ### Pattern 6: Evidence Retrieval
 
 ```bash
-dewbu evidence search --query <kw> --limit 5
-dewbu evidence get "ev::amazon_review::review::R1234..."
+voc evidence search --query <kw> --limit 5
+voc evidence get "ev::amazon_review::review::R1234..."
 ```
 
 ### Pattern 7: Custom SQL
 
 ```bash
-dewbu sql "SELECT brand, unnest(pain_points_mapped) as pain, count(*) FROM evidence_index WHERE brand IS NOT NULL GROUP BY brand, pain ORDER BY count(*) DESC LIMIT 20"
+voc sql "SELECT brand, unnest(pain_points_mapped) as pain, count(*) FROM evidence_index WHERE brand IS NOT NULL GROUP BY brand, pain ORDER BY count(*) DESC LIMIT 20"
 ```
 
 ---

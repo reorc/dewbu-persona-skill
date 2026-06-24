@@ -73,20 +73,20 @@ Agent 查询数据，构建 2-3 个候选 persona
 
 ```bash
 # 查画像
-dewbu profile search --query <keyword> --limit 20
+voc profile search --query <keyword> --limit 20
 
 # 查该人群的 evidence 分布
-dewbu evidence search --query <keyword> --source <source> --limit 30
+voc evidence search --query <keyword> --source <source> --limit 30
 
 # 查标签分布
-dewbu stats tags --group-by tag --source <source> --top 20
+voc stats tags --group-by tag --source <source> --top 20
 ```
 
 如果用户想聊的是生活方式、长期兴趣、平时还买什么、非 Dewbu 品类偏好，或者候选 persona 需要更立体，补充查询 Amazon 历史评论：
 
 ```bash
 # 找有历史评论背景的候选用户
-dewbu sql "SELECT user_id, history_review_count, std_use_cases, std_occupations, std_pain_points
+voc sql "SELECT user_id, history_review_count, std_use_cases, std_occupations, std_pain_points
 FROM user_profiles
 WHERE history_review_count > 0
   AND EXISTS (SELECT 1 FROM unnest(std_occupations) t WHERE t ILIKE '%<keyword>%')
@@ -94,7 +94,7 @@ ORDER BY history_review_count DESC
 LIMIT 20"
 
 # 查看某个候选用户的历史评论背景
-dewbu sql "SELECT product_brand, product_name, star, title, left(content, 220) AS snippet, review_time
+voc sql "SELECT product_brand, product_name, star, title, left(content, 220) AS snippet, review_time
 FROM amazon_reviewer_history_signals
 WHERE user_id = '<user_id>'
 ORDER BY review_time DESC NULLS LAST
@@ -172,13 +172,13 @@ B. 角色扮演 + 每次回答后附 evidence（可追溯）
 
 ```bash
 # 查该人群对某话题的真实反馈
-dewbu evidence search --query <话题关键词> --pain-points <persona的核心痛点> --limit 5
+voc evidence search --query <话题关键词> --pain-points <persona的核心痛点> --limit 5
 
 # 查该人群的具体使用场景
-dewbu evidence search --use-cases <场景关键词> --source <渠道> --limit 5
+voc evidence search --use-cases <场景关键词> --source <渠道> --limit 5
 
 # 查 persona 的长期兴趣和评价习惯
-dewbu sql "SELECT product_brand, product_name, star, title, left(content, 220) AS snippet
+voc sql "SELECT product_brand, product_name, star, title, left(content, 220) AS snippet
 FROM amazon_reviewer_history_signals
 WHERE user_id = '<persona_user_id>'
 ORDER BY review_time DESC NULLS LAST
@@ -224,12 +224,12 @@ LIMIT 10"
 ### 常用命令
 
 ```bash
-dewbu tags search <keyword>
-dewbu profile search --query <keyword> --limit 20
-dewbu evidence search --query <keyword> --limit 20
-dewbu evidence search --pain-points <keyword> --source amazon_review
-dewbu stats tags --group-by tag --top 20
-dewbu evidence get <evidence_id>
+voc tags search <keyword>
+voc profile search --query <keyword> --limit 20
+voc evidence search --query <keyword> --limit 20
+voc evidence search --pain-points <keyword> --source amazon_review
+voc stats tags --group-by tag --top 20
+voc evidence get <evidence_id>
 ```
 
 ---

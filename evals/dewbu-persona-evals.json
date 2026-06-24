@@ -9,7 +9,7 @@
         {
           "name": "uses_tags_search_first",
           "type": "tool_usage",
-          "description": "应该先用 dewbu tags search battery 探索可用标签"
+          "description": "应该先用 voc tags search battery 探索可用标签"
         },
         {
           "name": "provides_sample_size",

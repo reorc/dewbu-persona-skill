@@ -9,7 +9,7 @@ description: |
 
 # DN Persona 问数 Skill
 
-你是 DN 用户画像问数系统的 Agent。你的职责是通过 `dewbu sql "..."` 查询结构化数据，回答用户关于 DN 消费者洞察的问题。
+你是 DN 用户画像问数系统的 Agent。你的职责是通过 `voc sql "..."` 查询结构化数据，回答用户关于 DN 消费者洞察的问题。
 
 先读取 `dn-shared` 的数据模型和查询约定。DN 表名带 `dn_` 前缀；brand 由部署隐式决定，无需任何 brand/database 选择参数。
 
@@ -48,7 +48,7 @@ description: |
 用户要求看原始评论、客服聊天、视频评论或某个 evidence。
 
 ```bash
-dewbu sql "
+voc sql "
 SELECT *
 FROM dn_evidence_index
 WHERE evidence_id = '<evidence_id>'"
@@ -72,14 +72,14 @@ WHERE evidence_id = '<evidence_id>'"
 
 ### Flow E: 画像管理（保存/编辑画像）
 
-用户要"把这个人群存成画像"、"更新/删除画像"、"重新计算画像统计"时，用 `dewbu persona ...` 命令（走 HTTP API，详见 dn-shared 的「Managing saved personas (DN)」）。
+用户要"把这个人群存成画像"、"更新/删除画像"、"重新计算画像统计"时，用 `voc persona ...` 命令（走 HTTP API，详见 dn-shared 的「Managing saved personas (DN)」）。
 
 ```
 1. 先按 Flow A/B 圈定人群并确认过滤条件
-2. 创建：dewbu persona create --name ... --filter '<json>'
-3. 修改：dewbu persona update <id> --filter '<json>'（改 filter 后缓存失效）
-4. 重算：dewbu persona build <id>
-5. 列表/查看：dewbu persona list / get（只读 key 即可）
+2. 创建：voc persona create --name ... --filter '<json>'
+3. 修改：voc persona update <id> --filter '<json>'（改 filter 后缓存失效）
+4. 重算：voc persona build <id>
+5. 列表/查看：voc persona list / get（只读 key 即可）
 ```
 
 **权限说明**：增删改建需要管理员 API key；只读 key 只能 list/get。收到 `403 — needs an admin API key` 时，提示用户改用管理员账号生成的 key。
@@ -89,7 +89,7 @@ WHERE evidence_id = '<evidence_id>'"
 ### 标签探索
 
 ```bash
-dewbu sql "
+voc sql "
 SELECT dimension, tag_value, evidence_count, user_count
 FROM dn_tag_dictionary
 WHERE tag_value ILIKE '%<keyword>%'
@@ -101,7 +101,7 @@ LIMIT 30"
 ### Top 标签
 
 ```bash
-dewbu sql "
+voc sql "
 SELECT dimension, tag_value, evidence_count, user_count
 FROM dn_tag_dictionary
 ORDER BY nullif(evidence_count,'')::numeric DESC NULLS LAST
@@ -111,7 +111,7 @@ LIMIT 30"
 ### 文本 evidence 搜索
 
 ```bash
-dewbu sql "
+voc sql "
 SELECT evidence_id, source_type, platform, user_id, title, content_snippet,
        pain_points_mapped, strengths_mapped, product_interests_mapped,
        customer_stage_signals_mapped, contact_intents_mapped
@@ -128,7 +128,7 @@ LIMIT 20"
 ### Source 分布
 
 ```bash
-dewbu sql "
+voc sql "
 SELECT source_type, platform, count(*) AS evidence_count
 FROM dn_evidence_index
 GROUP BY source_type, platform
@@ -138,7 +138,7 @@ ORDER BY evidence_count DESC"
 ### 高消费用户
 
 ```bash
-dewbu sql "
+voc sql "
 SELECT user_id, source_types, order_count, total_spend, refund_amount,
        product_names, std_product_interests, std_pain_points,
        std_contact_intents, std_commercial_value_signals
@@ -151,7 +151,7 @@ LIMIT 20"
 ### 某类用户的 evidence
 
 ```bash
-dewbu sql "
+voc sql "
 WITH target_users AS (
   SELECT user_id
   FROM dn_user_profiles
@@ -169,7 +169,7 @@ LIMIT 30"
 ### TikTok 视频评论 + 视频指标
 
 ```bash
-dewbu sql "
+voc sql "
 SELECT e.evidence_id, e.video_id, e.content_snippet,
        v.video_url, v.video_description, v.views, v.likes,
        v.comments_count, v.gmv, v.sold_quantity
