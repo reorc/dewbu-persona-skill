@@ -2,7 +2,7 @@
 
 ## 数据库
 
-`dewbu_persona_v2`，通过 `dewbu` CLI 查询；默认使用 Dewbu HTTP API，本地配置保存在 `~/.dewbu/config.json`。
+`dewbu_persona_v2`，通过 `voc` CLI 查询；默认使用 Dewbu HTTP API，本地配置保存在 `~/.voc/config.json`。
 
 ## 架构
 
@@ -124,22 +124,22 @@ Amazon 历史评论背景表：`amazon_reviewer_history_signals` 26,936 条；`u
 
 ## 直接 SQL 查询
 
-可以使用 `dewbu sql` 命令执行任意 SELECT 查询：
+可以使用 `voc sql` 命令执行任意 SELECT 查询：
 
 ```bash
 # 品牌分布
-dewbu sql "SELECT brand, count(*) FROM amazon_review_signals GROUP BY brand ORDER BY count(*) DESC"
+voc sql "SELECT brand, count(*) FROM amazon_review_signals GROUP BY brand ORDER BY count(*) DESC"
 
 # 痛点 Top 10
-dewbu sql "SELECT tag_value, evidence_count FROM tag_dictionary WHERE dimension = 'pain_points' ORDER BY evidence_count DESC LIMIT 10"
+voc sql "SELECT tag_value, evidence_count FROM tag_dictionary WHERE dimension = 'pain_points' ORDER BY evidence_count DESC LIMIT 10"
 
 # 跨表联查
-dewbu sql "SELECT e.source_type, e.title, e.content_snippet, u.total_spend
+voc sql "SELECT e.source_type, e.title, e.content_snippet, u.total_spend
 FROM evidence_index e JOIN user_profiles u USING(user_id)
 WHERE u.total_spend > 500 LIMIT 10"
 
 # 猎人群体的 Amazon 历史评论品类/品牌兴趣
-dewbu sql "WITH hunter_users AS (
+voc sql "WITH hunter_users AS (
   SELECT user_id FROM user_profiles
   WHERE history_review_count > 0
     AND EXISTS (SELECT 1 FROM unnest(std_occupations) t WHERE t ILIKE '%hunter%')

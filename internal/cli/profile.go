@@ -10,6 +10,7 @@ import (
 	"github.com/reorc/dewbu-persona-skill/internal/model"
 	"github.com/spf13/cobra"
 )
+
 var profileCmd = &cobra.Command{
 	Use:   "profile",
 	Short: "Query user profiles",
@@ -115,7 +116,7 @@ func runProfileSearch(cmd *cobra.Command, args []string) error {
 	}
 
 	countSQL := fmt.Sprintf("SELECT count(*) FROM user_profiles WHERE %s", where)
-	total, err := db.QueryScalar(database, countSQL)
+	total, err := db.QueryScalar(countSQL)
 	if err != nil {
 		return fmt.Errorf("count query failed: %w", err)
 	}
@@ -127,7 +128,7 @@ func runProfileSearch(cmd *cobra.Command, args []string) error {
 		selectFields, where, limit, offset,
 	)
 
-	rows, err := db.QueryRows(database, querySQL)
+	rows, err := db.QueryRows(querySQL)
 	if err != nil {
 		return fmt.Errorf("search query failed: %w", err)
 	}
@@ -135,7 +136,6 @@ func runProfileSearch(cmd *cobra.Command, args []string) error {
 	resp := &model.Response{
 		Meta: model.Meta{
 			Command:  "profile.search",
-			Database: database,
 			Filter:   filterDescription(f),
 			Total:    totalInt,
 			Returned: len(rows),
@@ -183,7 +183,7 @@ func runProfileSchema(cmd *cobra.Command, args []string) error {
 			"SELECT tag_value, evidence_count, user_count FROM tag_dictionary WHERE dimension = %s ORDER BY evidence_count DESC",
 			db.EscapeString(prDimension),
 		)
-		rows, err := db.QueryRows(database, sql)
+		rows, err := db.QueryRows(sql)
 		if err != nil {
 			return fmt.Errorf("schema query failed: %w", err)
 		}
@@ -191,7 +191,6 @@ func runProfileSchema(cmd *cobra.Command, args []string) error {
 		resp := &model.Response{
 			Meta: model.Meta{
 				Command:  "profile.schema",
-				Database: database,
 				Total:    len(rows),
 				Returned: len(rows),
 				Limit:    len(rows),
@@ -207,7 +206,7 @@ func runProfileSchema(cmd *cobra.Command, args []string) error {
 
 	// Return full schema overview
 	dimensionSQL := `SELECT dimension, count(*) as tag_count, sum(evidence_count) as total_mentions FROM tag_dictionary GROUP BY dimension ORDER BY total_mentions DESC`
-	dimensions, err := db.QueryRows(database, dimensionSQL)
+	dimensions, err := db.QueryRows(dimensionSQL)
 	if err != nil {
 		return fmt.Errorf("schema query failed: %w", err)
 	}

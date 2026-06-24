@@ -23,15 +23,17 @@ jobs:
 
       - name: Build
         run: |
-          CGO_ENABLED=0 go build -o dewbu ./cmd/dewbu
-          ./dewbu version
+          CGO_ENABLED=0 go build -o voc ./cmd/voc
+          ./voc version
+          CGO_ENABLED=0 go build -o /tmp/dewbu-compat ./cmd/dewbu
+          /tmp/dewbu-compat version
 
       - name: Cross-compile check
         run: |
           for os in darwin linux; do
             for arch in amd64 arm64; do
               echo "Building ${os}/${arch}..."
-              GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -o /dev/null ./cmd/dewbu
+              GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -o /dev/null ./cmd/voc
             done
           done
 

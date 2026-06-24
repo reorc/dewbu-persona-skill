@@ -35,9 +35,9 @@ type Config struct {
 }
 
 var config = Config{
-	Backend: getenv("DEWBU_BACKEND", "http"),
-	APIURL:  os.Getenv("DEWBU_API_BASE_URL"),
-	APIKey:  os.Getenv("DEWBU_API_KEY"),
+	Backend: getenvAny("http", "VOC_BACKEND", "DEWBU_BACKEND"),
+	APIURL:  getenvAny("", "VOC_API_BASE_URL", "DEWBU_API_BASE_URL"),
+	APIKey:  getenvAny("", "VOC_API_KEY", "DEWBU_API_KEY"),
 	Timeout: 30 * time.Second,
 }
 
@@ -65,9 +65,20 @@ func Configure(cfg Config) {
 }
 
 func DefaultConfigPath() string {
+	if path := strings.TrimSpace(os.Getenv("VOC_CONFIG")); path != "" {
+		return path
+	}
 	if path := strings.TrimSpace(os.Getenv("DEWBU_CONFIG")); path != "" {
 		return path
 	}
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return filepath.Join(".voc", "config.json")
+	}
+	return filepath.Join(home, ".voc", "config.json")
+}
+
+func legacyConfigPath() string {
 	home, err := os.UserHomeDir()
 	if err != nil || home == "" {
 		return filepath.Join(".dewbu", "config.json")
@@ -108,7 +119,18 @@ func LoadDefaultConfigFile() (Config, error) {
 	path := DefaultConfigPath()
 	cfg, err := LoadConfigFile(path)
 	if os.IsNotExist(err) {
-		return Config{}, nil
+		if strings.TrimSpace(os.Getenv("VOC_CONFIG")) != "" || strings.TrimSpace(os.Getenv("DEWBU_CONFIG")) != "" {
+			return Config{}, nil
+		}
+		legacyPath := legacyConfigPath()
+		if legacyPath == path {
+			return Config{}, nil
+		}
+		legacyCfg, legacyErr := LoadConfigFile(legacyPath)
+		if os.IsNotExist(legacyErr) {
+			return Config{}, nil
+		}
+		return legacyCfg, legacyErr
 	}
 	return cfg, err
 }
@@ -150,21 +172,22 @@ func (r *QueryResult) ColumnNames() []string {
 }
 
 // Query executes a SQL query against the HTTP API and returns the raw result.
-func Query(database, sql string) (*QueryResult, error) {
-	return queryHTTP(database, sql)
+// The target brand/database is determined entirely by the configured deployment
+// (svc_base_url + api_key); the client no longer selects a database.
+func Query(sql string) (*QueryResult, error) {
+	return queryHTTP(sql)
 }
 
-func queryHTTP(database, sql string) (*QueryResult, error) {
+func queryHTTP(sql string) (*QueryResult, error) {
 	if config.APIURL == "" {
-		return nil, fmt.Errorf("svc_base_url is required (run: dewbu config set --svc-base-url ...)")
+		return nil, fmt.Errorf("svc_base_url is required (run: voc config set --svc-base-url ...)")
 	}
 	if config.APIKey == "" {
-		return nil, fmt.Errorf("api_key is required (run: dewbu config set --api-key ...)")
+		return nil, fmt.Errorf("api_key is required (run: voc config set --api-key ...)")
 	}
 	endpoint := queryEndpoint(config.APIURL)
 	body, err := json.Marshal(map[string]string{
-		"database": database,
-		"sql":      sql,
+		"sql": sql,
 	})
 	if err != nil {
 		return nil, err
@@ -213,8 +236,8 @@ func queryEndpoint(baseURL string) string {
 }
 
 // QueryRows executes SQL and returns results as []map[string]interface{}.
-func QueryRows(database, sql string) ([]map[string]interface{}, error) {
-	result, err := Query(database, sql)
+func QueryRows(sql string) ([]map[string]interface{}, error) {
+	result, err := Query(sql)
 	if err != nil {
 		return nil, err
 	}
@@ -257,14 +280,14 @@ type APIError struct {
 func (e *APIError) Error() string { return e.Message }
 
 // Request performs an authenticated JSON request against an /api/cli/v1 path
-// (e.g. "/v1/personas?brand=dewbu") and decodes the response into out (may be nil).
+// (e.g. "/v1/personas") and decodes the response into out (may be nil).
 // Used by the persona management commands.
 func Request(method, path string, body interface{}, out interface{}) error {
 	if config.APIURL == "" {
-		return fmt.Errorf("svc_base_url is required (run: dewbu config set --svc-base-url ...)")
+		return fmt.Errorf("svc_base_url is required (run: voc config set --svc-base-url ...)")
 	}
 	if config.APIKey == "" {
-		return fmt.Errorf("api_key is required (run: dewbu config set --api-key ...)")
+		return fmt.Errorf("api_key is required (run: voc config set --api-key ...)")
 	}
 
 	endpoint := apiBase(config.APIURL) + path
@@ -323,8 +346,8 @@ func Request(method, path string, body interface{}, out interface{}) error {
 }
 
 // QueryScalar executes SQL and returns a single value.
-func QueryScalar(database, sql string) (interface{}, error) {
-	result, err := Query(database, sql)
+func QueryScalar(sql string) (interface{}, error) {
+	result, err := Query(sql)
 	if err != nil {
 		return nil, err
 	}
@@ -350,10 +373,11 @@ func EscapeArray(items []string) string {
 	return "ARRAY[" + strings.Join(escaped, ",") + "]"
 }
 
-func getenv(key, fallback string) string {
-	value := os.Getenv(key)
-	if value == "" {
-		return fallback
+func getenvAny(fallback string, keys ...string) string {
+	for _, key := range keys {
+		if value := strings.TrimSpace(os.Getenv(key)); value != "" {
+			return value
+		}
 	}
-	return value
+	return fallback
 }

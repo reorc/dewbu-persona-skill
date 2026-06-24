@@ -12,7 +12,6 @@ import (
 )
 
 var (
-	prBrand       string
 	prName        string
 	prDescription string
 	prFilter      string
@@ -29,7 +28,7 @@ var personaCmd = &cobra.Command{
 
 var personaListCmd = &cobra.Command{
 	Use:   "list",
-	Short: "List personas for a brand (read-only)",
+	Short: "List personas (read-only)",
 	RunE:  runPersonaList,
 }
 
@@ -71,9 +70,6 @@ func init() {
 	rootCmd.AddCommand(personaCmd)
 	personaCmd.AddCommand(personaListCmd, personaGetCmd, personaCreateCmd, personaUpdateCmd, personaDeleteCmd, personaBuildCmd)
 
-	for _, c := range []*cobra.Command{personaListCmd, personaCreateCmd, personaBuildCmd} {
-		c.Flags().StringVar(&prBrand, "brand", "", "brand id (dewbu|dn); defaults from --db")
-	}
 	personaCreateCmd.Flags().StringVar(&prName, "name", "", "persona name (required)")
 	personaCreateCmd.Flags().StringVar(&prDescription, "description", "", "persona description")
 	personaCreateCmd.Flags().StringVar(&prFilter, "filter", "", "persona filter config as JSON object (required)")
@@ -81,20 +77,6 @@ func init() {
 	personaUpdateCmd.Flags().StringVar(&prName, "name", "", "new persona name")
 	personaUpdateCmd.Flags().StringVar(&prDescription, "description", "", "new persona description")
 	personaUpdateCmd.Flags().StringVar(&prFilter, "filter", "", "new persona filter config as JSON object")
-}
-
-// brandID resolves the brand for a persona request: explicit --brand wins,
-// otherwise it is derived from the --db database name.
-func brandID() string {
-	if strings.TrimSpace(prBrand) != "" {
-		return strings.TrimSpace(prBrand)
-	}
-	switch database {
-	case "dn_persona":
-		return "dn"
-	default:
-		return "dewbu"
-	}
 }
 
 // printJSON pretty-prints a decoded JSON value to stdout.
@@ -112,7 +94,7 @@ func describeError(err error) error {
 	if apiErr, ok := err.(*db.APIError); ok {
 		switch apiErr.Status {
 		case http.StatusUnauthorized:
-			return fmt.Errorf("unauthorized (401): check your API key — run `dewbu config show`")
+			return fmt.Errorf("unauthorized (401): check your API key — run `voc config show`")
 		case http.StatusForbidden:
 			return fmt.Errorf("forbidden (403): %s — this operation needs an admin API key", apiErr.Message)
 		case http.StatusNotFound:
@@ -125,8 +107,7 @@ func describeError(err error) error {
 
 func runPersonaList(cmd *cobra.Command, args []string) error {
 	var out map[string]interface{}
-	path := "/v1/personas?brand=" + url.QueryEscape(brandID())
-	if err := db.Request(http.MethodGet, path, nil, &out); err != nil {
+	if err := db.Request(http.MethodGet, "/v1/personas", nil, &out); err != nil {
 		return describeError(err)
 	}
 	return printJSON(out)
@@ -154,7 +135,6 @@ func runPersonaCreate(cmd *cobra.Command, args []string) error {
 	}
 
 	body := map[string]interface{}{
-		"brand":   brandID(),
 		"name":    prName,
 		"filters": filters,
 	}
@@ -206,10 +186,9 @@ func runPersonaDelete(cmd *cobra.Command, args []string) error {
 }
 
 func runPersonaBuild(cmd *cobra.Command, args []string) error {
-	body := map[string]interface{}{"brand": brandID()}
 	var out map[string]interface{}
 	path := "/v1/personas/" + url.PathEscape(args[0])
-	if err := db.Request(http.MethodPost, path, body, &out); err != nil {
+	if err := db.Request(http.MethodPost, path, map[string]interface{}{}, &out); err != nil {
 		return describeError(err)
 	}
 	return printJSON(out)

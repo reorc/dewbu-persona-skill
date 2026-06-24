@@ -109,7 +109,7 @@ func runEvidenceSearch(cmd *cobra.Command, args []string) error {
 
 	// Standard search (no --query, or --query via JSON filter which uses FTS only)
 	countSQL := fmt.Sprintf("SELECT count(*) FROM evidence_index WHERE %s", where)
-	total, err := db.QueryScalar(database, countSQL)
+	total, err := db.QueryScalar(countSQL)
 	if err != nil {
 		return fmt.Errorf("count query failed: %w", err)
 	}
@@ -127,7 +127,7 @@ func runEvidenceSearch(cmd *cobra.Command, args []string) error {
 		selectFields, where, orderBy, limit, offset,
 	)
 
-	rows, err := db.QueryRows(database, querySQL)
+	rows, err := db.QueryRows(querySQL)
 	if err != nil {
 		return fmt.Errorf("search query failed: %w", err)
 	}
@@ -135,7 +135,6 @@ func runEvidenceSearch(cmd *cobra.Command, args []string) error {
 	resp := &model.Response{
 		Meta: model.Meta{
 			Command:  "evidence.search",
-			Database: database,
 			Filter:   filterDescription(f),
 			Total:    totalInt,
 			Returned: len(rows),
@@ -160,7 +159,7 @@ func runTieredSearch(baseWhere, query string) error {
 		"SELECT count(*) FROM evidence_index WHERE %s AND %s",
 		baseWhere, smartWhere,
 	)
-	tier1Count, _ := db.QueryScalar(database, tier1CountSQL)
+	tier1Count, _ := db.QueryScalar(tier1CountSQL)
 	tier1Int := parseCount(tier1Count)
 
 	// Count tier 2 (FTS hits not in tier 1)
@@ -168,7 +167,7 @@ func runTieredSearch(baseWhere, query string) error {
 		"SELECT count(*) FROM evidence_index WHERE %s AND content_tsv @@ plainto_tsquery('english', %s) AND NOT %s",
 		baseWhere, ftsQuery, smartWhere,
 	)
-	tier2Count, _ := db.QueryScalar(database, tier2CountSQL)
+	tier2Count, _ := db.QueryScalar(tier2CountSQL)
 	tier2Int := parseCount(tier2Count)
 
 	totalInt := tier1Int + tier2Int
@@ -205,15 +204,14 @@ LIMIT %d OFFSET %d`,
 		limit, offset,
 	)
 
-	rows, err := db.QueryRows(database, tieredSQL)
+	rows, err := db.QueryRows(tieredSQL)
 	if err != nil {
 		return fmt.Errorf("tiered search failed: %w", err)
 	}
 
 	resp := &model.Response{
 		Meta: model.Meta{
-			Command:  "evidence.search",
-			Database: database,
+			Command: "evidence.search",
 			Filter: map[string]interface{}{
 				"query":       query,
 				"mode":        "tiered",
@@ -283,7 +281,7 @@ func runEvidenceGet(cmd *cobra.Command, args []string) error {
 		db.EscapeString(evidenceID),
 	)
 
-	rows, err := db.QueryRows(database, querySQL)
+	rows, err := db.QueryRows(querySQL)
 	if err != nil {
 		return fmt.Errorf("get query failed: %w", err)
 	}
@@ -295,7 +293,6 @@ func runEvidenceGet(cmd *cobra.Command, args []string) error {
 	resp := &model.Response{
 		Meta: model.Meta{
 			Command:  "evidence.get",
-			Database: database,
 			Total:    1,
 			Returned: 1,
 			Limit:    1,

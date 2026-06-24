@@ -11,7 +11,7 @@ type Response struct {
 // Meta contains query metadata.
 type Meta struct {
 	Command  string      `json:"command"`
-	Database string      `json:"database"`
+	Database string      `json:"database,omitempty"`
 	Filter   interface{} `json:"filter,omitempty"`
 	Total    int         `json:"total"`
 	Returned int         `json:"returned"`
