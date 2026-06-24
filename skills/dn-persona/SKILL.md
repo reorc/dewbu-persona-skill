@@ -70,6 +70,20 @@ WHERE evidence_id = '<evidence_id>'" --json
 2. 用 `video_id` 联查 `dn_evidence_index` 或 `dn_tiktok_video_comment_signals`。
 3. 分开说明内容表现指标和评论/用户反馈。
 
+### Flow E: 画像管理（保存/编辑画像）
+
+用户要"把这个人群存成画像"、"更新/删除画像"、"重新计算画像统计"时，用 `dewbu persona ... --brand dn` 命令（走 HTTP API，详见 dn-shared 的「Managing saved personas (DN)」）。
+
+```
+1. 先按 Flow A/B 圈定人群并确认过滤条件
+2. 创建：dewbu persona create --brand dn --name ... --filter '<json>'
+3. 修改：dewbu persona update <id> --filter '<json>'（改 filter 后缓存失效）
+4. 重算：dewbu persona build <id>
+5. 列表/查看：dewbu persona list --brand dn / get（只读 key 即可）
+```
+
+**权限说明**：增删改建需要管理员 API key；只读 key 只能 list/get。收到 `403 — needs an admin API key` 时，提示用户改用管理员账号生成的 key。
+
 ## 常用 SQL 模板
 
 ### 标签探索

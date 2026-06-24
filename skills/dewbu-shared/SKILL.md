@@ -106,6 +106,32 @@ dewbu stats tags --group-by dimension
 dewbu stats tags --group-by tag --top 20
 ```
 
+### dewbu persona (manage saved personas)
+
+Manage saved personas. **Permissions follow your API key**: a read-only (user)
+key can `list` / `get`; create / update / delete / build require an **admin**
+key. A read-only key attempting a write returns `403 — needs an admin API key`.
+
+```bash
+# read-only (any key)
+dewbu persona list --brand dewbu
+dewbu persona get <persona_id>
+
+# writes (admin key only)
+dewbu persona create --brand dewbu --name "Hunters" \
+  --description "Cold-weather hunting users" \
+  --filter '{"occupations":["hunter"],"stars":[1,2]}'
+dewbu persona update <persona_id> --name "Hunters v2" --filter '{"stars":[1,2,3]}'
+dewbu persona build  <persona_id>   # recompute cached profile/stats
+dewbu persona delete <persona_id>
+```
+
+`--filter` is a persona filter config JSON object (same shape the webapp uses):
+`brands`, `platforms`, `stars`, `countries`, `timeStart`, `timeEnd`, `tags`
+(`[{"dimension","values"}]`), `gender`, `ageRange`, `spendRange`,
+`orderCountRange`, `sourceTypes`. Editing the filter clears the cached profile —
+run `dewbu persona build <id>` afterwards to refresh stats.
+
 ---
 
 ## Data Model
@@ -118,11 +144,12 @@ Onboarding:
 
 1. Open `https://dewbu-persona.tool.reorc.cloud/`
 2. Go to `Admin` -> `Accounts`
-3. Open `More` -> `API keys` for an active admin account
+3. Open `More` -> `API keys` for any active account (the key inherits that
+   account's permissions: admin = full persona management, user = read-only)
 4. Generate a key, copy it once, then configure the CLI
 
 ```bash
-dewbu config set --backend http --svc-base-url https://dewbu-persona.tool.reorc.cloud/ --api-key dewbu_live_xxx
+dewbu config set --svc-base-url https://dewbu-persona.tool.reorc.cloud/ --api-key dewbu_live_xxx
 dewbu config show
 ```
 

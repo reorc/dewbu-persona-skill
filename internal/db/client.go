@@ -4,10 +4,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"strings"
 	"time"
@@ -149,43 +149,17 @@ func (r *QueryResult) ColumnNames() []string {
 	return names
 }
 
-// Query executes a SQL query against db9 and returns raw result.
+// Query executes a SQL query against the HTTP API and returns the raw result.
 func Query(database, sql string) (*QueryResult, error) {
-	switch strings.ToLower(strings.TrimSpace(config.Backend)) {
-	case "db9":
-		return queryDB9(database, sql)
-	case "http", "api":
-		return queryHTTP(database, sql)
-	default:
-		return nil, fmt.Errorf("unknown backend %q; use db9 or http", config.Backend)
-	}
-}
-
-func queryDB9(database, sql string) (*QueryResult, error) {
-	cmd := exec.Command("db9", "db", "sql", database, "-q", sql, "--json")
-	out, err := cmd.Output()
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			return nil, fmt.Errorf("db9 error: %s", string(exitErr.Stderr))
-		}
-		return nil, fmt.Errorf("db9 exec error: %w", err)
-	}
-
-	var result QueryResult
-	if err := json.Unmarshal(out, &result); err != nil {
-		// db9 might return non-JSON (plain text table format)
-		// Try to parse as plain text
-		return nil, fmt.Errorf("failed to parse db9 JSON output: %w\nraw: %s", err, string(out[:min(len(out), 200)]))
-	}
-	return &result, nil
+	return queryHTTP(database, sql)
 }
 
 func queryHTTP(database, sql string) (*QueryResult, error) {
 	if config.APIURL == "" {
-		return nil, fmt.Errorf("svc_base_url is required when backend=http")
+		return nil, fmt.Errorf("svc_base_url is required (run: dewbu config set --svc-base-url ...)")
 	}
 	if config.APIKey == "" {
-		return nil, fmt.Errorf("api_key is required when backend=http")
+		return nil, fmt.Errorf("api_key is required (run: dewbu config set --api-key ...)")
 	}
 	endpoint := queryEndpoint(config.APIURL)
 	body, err := json.Marshal(map[string]string{
@@ -259,15 +233,91 @@ func QueryRows(database, sql string) ([]map[string]interface{}, error) {
 	return rows, nil
 }
 
-// Exec executes a SQL statement (no result expected).
-func Exec(database, sql string) error {
-	if strings.EqualFold(strings.TrimSpace(config.Backend), "http") || strings.EqualFold(strings.TrimSpace(config.Backend), "api") {
-		return fmt.Errorf("Exec is not supported by the http backend")
+// apiBase resolves the API root (".../api/cli") from the configured base URL,
+// accepting either a service base, an api/cli base, or a full /v1/* endpoint.
+func apiBase(baseURL string) string {
+	trimmed := strings.TrimRight(strings.TrimSpace(baseURL), "/")
+	if idx := strings.Index(trimmed, "/api/cli"); idx >= 0 {
+		return trimmed[:idx] + "/api/cli"
 	}
-	cmd := exec.Command("db9", "db", "sql", database, "-q", sql)
-	out, err := cmd.CombinedOutput()
+	parsed, err := url.Parse(trimmed)
+	if err == nil && (parsed.Path == "" || parsed.Path == "/") {
+		return trimmed + "/api/cli"
+	}
+	return trimmed + "/api/cli"
+}
+
+// APIError carries the HTTP status so callers can give role-aware messages
+// (e.g. 401 → check key, 403 → needs admin key).
+type APIError struct {
+	Status  int
+	Message string
+}
+
+func (e *APIError) Error() string { return e.Message }
+
+// Request performs an authenticated JSON request against an /api/cli/v1 path
+// (e.g. "/v1/personas?brand=dewbu") and decodes the response into out (may be nil).
+// Used by the persona management commands.
+func Request(method, path string, body interface{}, out interface{}) error {
+	if config.APIURL == "" {
+		return fmt.Errorf("svc_base_url is required (run: dewbu config set --svc-base-url ...)")
+	}
+	if config.APIKey == "" {
+		return fmt.Errorf("api_key is required (run: dewbu config set --api-key ...)")
+	}
+
+	endpoint := apiBase(config.APIURL) + path
+
+	var reader io.Reader
+	if body != nil {
+		data, err := json.Marshal(body)
+		if err != nil {
+			return err
+		}
+		reader = bytes.NewReader(data)
+	}
+
+	req, err := http.NewRequest(method, endpoint, reader)
 	if err != nil {
-		return fmt.Errorf("db9 error: %s", string(out))
+		return err
+	}
+	req.Header.Set("Authorization", "Bearer "+config.APIKey)
+	if body != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
+
+	client := &http.Client{Timeout: config.Timeout}
+	resp, err := client.Do(req)
+	if err != nil {
+		return fmt.Errorf("request error: %w", err)
+	}
+	defer resp.Body.Close()
+
+	raw, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		msg := strings.TrimSpace(string(raw))
+		var errBody struct {
+			Error   string `json:"error"`
+			Message string `json:"message"`
+		}
+		if json.Unmarshal(raw, &errBody) == nil && errBody.Error != "" {
+			msg = errBody.Error
+			if errBody.Message != "" {
+				msg = errBody.Error + ": " + errBody.Message
+			}
+		}
+		if msg == "" {
+			msg = fmt.Sprintf("request returned status %d", resp.StatusCode)
+		}
+		return &APIError{Status: resp.StatusCode, Message: msg}
+	}
+
+	if out != nil && len(raw) > 0 {
+		if err := json.Unmarshal(raw, out); err != nil {
+			return fmt.Errorf("failed to parse response: %w", err)
+		}
 	}
 	return nil
 }
@@ -298,13 +348,6 @@ func EscapeArray(items []string) string {
 		escaped[i] = EscapeString(item)
 	}
 	return "ARRAY[" + strings.Join(escaped, ",") + "]"
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }
 
 func getenv(key, fallback string) string {

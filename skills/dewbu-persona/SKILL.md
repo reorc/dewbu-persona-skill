@@ -82,6 +82,20 @@ description: |
 
 历史评论标签未做 Dewbu 标准化，因为商品面很广。不要依赖历史表里的 `pain_points`、`use_cases` 等数组做精确统计；优先用商品名称、品牌、星级、标题、正文和时间做归纳，标签只作为弱辅助。
 
+### Flow F: 画像管理（保存/编辑画像）
+
+用户要"把这个人群存成画像"、"更新某个画像的条件"、"删掉某画像"、"重新计算画像统计"时使用 `dewbu persona` 命令（详见 dewbu-shared 的命令参考）。
+
+```
+1. 先按 Flow A/B 圈定人群并确认过滤条件（PersonaFilterConfig）
+2. 创建：dewbu persona create --name ... --filter '<json>'
+3. 修改：dewbu persona update <id> --filter '<json>'（改 filter 后缓存失效）
+4. 重算：dewbu persona build <id> 刷新统计
+5. 列表/查看：dewbu persona list / get（只读 key 即可）
+```
+
+**权限说明**：增删改建（create/update/delete/build）需要管理员 API key；只读 key 只能 list/get。若收到 `403 — needs an admin API key`，告诉用户需要用管理员账号生成的 key（后台 Admin → Accounts → API keys）。
+
 ## 回答格式
 
 所有回答必须遵循以下结构：

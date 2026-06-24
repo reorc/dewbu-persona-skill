@@ -83,8 +83,8 @@ func init() {
 	rootCmd.PersistentFlags().IntVar(&limit, "limit", 20, "max rows to return")
 	rootCmd.PersistentFlags().IntVar(&offset, "offset", 0, "offset for pagination")
 	rootCmd.PersistentFlags().StringVar(&fields, "fields", "", "comma-separated fields to return")
-	rootCmd.PersistentFlags().StringVar(&backend, "backend", os.Getenv("DEWBU_BACKEND"), "query backend (default: http)")
-	rootCmd.PersistentFlags().StringVar(&apiURL, "api-url", os.Getenv("DEWBU_API_BASE_URL"), "HTTP backend base URL")
-	rootCmd.PersistentFlags().StringVar(&apiURL, "svc-base-url", os.Getenv("DEWBU_API_BASE_URL"), "HTTP backend service base URL")
-	rootCmd.PersistentFlags().StringVar(&apiKey, "api-key", os.Getenv("DEWBU_API_KEY"), "HTTP backend API key")
+	rootCmd.PersistentFlags().StringVar(&backend, "backend", os.Getenv("DEWBU_BACKEND"), "deprecated, ignored — HTTP is the only backend")
+	rootCmd.PersistentFlags().StringVar(&apiURL, "api-url", os.Getenv("DEWBU_API_BASE_URL"), "API base URL")
+	rootCmd.PersistentFlags().StringVar(&apiURL, "svc-base-url", os.Getenv("DEWBU_API_BASE_URL"), "API service base URL")
+	rootCmd.PersistentFlags().StringVar(&apiKey, "api-key", os.Getenv("DEWBU_API_KEY"), "API key")
 }

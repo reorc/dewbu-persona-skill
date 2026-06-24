@@ -24,6 +24,31 @@ db9 db sql dn_persona -q "SELECT dimension, tag_value, evidence_count FROM dn_ta
 
 Do not run write operations unless the user explicitly asks for data modification. Most persona and interview work should only query.
 
+## Managing saved personas (DN)
+
+Saved DN personas are managed through the `dewbu` CLI over HTTP with `--brand dn`
+(this is separate from the `db9` query path above). **Permissions follow your
+API key**: a read-only (user) key can `list` / `get`; create / update / delete /
+build require an **admin** key, and a read-only key attempting a write returns
+`403 — needs an admin API key`.
+
+```bash
+# read-only (any key)
+dewbu persona list --brand dn
+dewbu persona get <persona_id>
+
+# writes (admin key only)
+dewbu persona create --brand dn --name "..." --filter '{"stars":[1,2]}'
+dewbu persona update <persona_id> --filter '{"stars":[1,2,3]}'
+dewbu persona build  <persona_id>   # recompute cached profile/stats
+dewbu persona delete <persona_id>
+```
+
+The CLI must be configured with an API key first (`dewbu config set
+--svc-base-url ... --api-key ...`). Generate the key in the webapp under
+`Admin → Accounts → API keys`; pick an admin account for management, a regular
+user account for read-only access.
+
 ## Database
 
 `dn_persona` (db9)
