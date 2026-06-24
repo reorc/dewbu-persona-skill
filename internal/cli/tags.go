@@ -36,7 +36,7 @@ func runTagsSearch(cmd *cobra.Command, args []string) error {
 		"SELECT dimension, tag_value, evidence_count, user_count FROM tag_dictionary WHERE tag_value ILIKE %s ORDER BY evidence_count DESC LIMIT 50",
 		escaped,
 	)
-	dictRows, err := db.QueryRows(database, dictSQL)
+	dictRows, err := db.QueryRows(dictSQL)
 	if err != nil {
 		return fmt.Errorf("tag_dictionary search failed: %w", err)
 	}
@@ -56,7 +56,7 @@ func runTagsSearch(cmd *cobra.Command, args []string) error {
 		strings.Join(unions, " UNION ALL "),
 		limit,
 	)
-	usageRows, err := db.QueryRows(database, usageSQL)
+	usageRows, err := db.QueryRows(usageSQL)
 	if err != nil {
 		return fmt.Errorf("usage search failed: %w", err)
 	}
@@ -64,7 +64,6 @@ func runTagsSearch(cmd *cobra.Command, args []string) error {
 	resp := &model.Response{
 		Meta: model.Meta{
 			Command:  "tags.search",
-			Database: database,
 			Total:    len(dictRows) + len(usageRows),
 			Returned: len(dictRows) + len(usageRows),
 			Limit:    limit,

@@ -18,12 +18,14 @@ Configure the CLI:
 
 ```bash
 dewbu config set \
-  --backend http \
-  --svc-base-url https://dewbu-persona.tool.reorc.cloud/ \
+  --svc-base-url https://<deployment-domain>/ \
   --api-key dewbu_live_xxx
 
 dewbu sql "SELECT count(*) FROM evidence_index"
 ```
+
+The deployment you point at (`svc-base-url` + `api-key`) determines the brand —
+there is no brand/database flag.
 
 This writes `~/.dewbu/config.json` with file mode `0600`. You can inspect the active configuration without revealing the full key:
 

@@ -150,11 +150,13 @@ func (r *QueryResult) ColumnNames() []string {
 }
 
 // Query executes a SQL query against the HTTP API and returns the raw result.
-func Query(database, sql string) (*QueryResult, error) {
-	return queryHTTP(database, sql)
+// The target brand/database is determined entirely by the configured deployment
+// (svc_base_url + api_key); the client no longer selects a database.
+func Query(sql string) (*QueryResult, error) {
+	return queryHTTP(sql)
 }
 
-func queryHTTP(database, sql string) (*QueryResult, error) {
+func queryHTTP(sql string) (*QueryResult, error) {
 	if config.APIURL == "" {
 		return nil, fmt.Errorf("svc_base_url is required (run: dewbu config set --svc-base-url ...)")
 	}
@@ -163,8 +165,7 @@ func queryHTTP(database, sql string) (*QueryResult, error) {
 	}
 	endpoint := queryEndpoint(config.APIURL)
 	body, err := json.Marshal(map[string]string{
-		"database": database,
-		"sql":      sql,
+		"sql": sql,
 	})
 	if err != nil {
 		return nil, err
@@ -213,8 +214,8 @@ func queryEndpoint(baseURL string) string {
 }
 
 // QueryRows executes SQL and returns results as []map[string]interface{}.
-func QueryRows(database, sql string) ([]map[string]interface{}, error) {
-	result, err := Query(database, sql)
+func QueryRows(sql string) ([]map[string]interface{}, error) {
+	result, err := Query(sql)
 	if err != nil {
 		return nil, err
 	}
@@ -323,8 +324,8 @@ func Request(method, path string, body interface{}, out interface{}) error {
 }
 
 // QueryScalar executes SQL and returns a single value.
-func QueryScalar(database, sql string) (interface{}, error) {
-	result, err := Query(database, sql)
+func QueryScalar(sql string) (interface{}, error) {
+	result, err := Query(sql)
 	if err != nil {
 		return nil, err
 	}

@@ -18,11 +18,12 @@ Read this before using any Dewbu skill. It covers the CLI commands, data model, 
 
 | Flag | Default | Description |
 |------|---------|-------------|
-| `--db` | `dewbu_persona_v2` | Database name |
 | `--format` | `json` | Output: json / table / csv |
 | `--limit` | `20` | Max rows returned |
 | `--offset` | `0` | Pagination offset |
 | `--fields` | all | Comma-separated return fields |
+
+> The brand/database is determined by the configured deployment (`svc_base_url` + `api_key`) — there is no brand or database selection flag.
 
 ### dewbu sql \<query\>
 
@@ -114,11 +115,11 @@ key. A read-only key attempting a write returns `403 — needs an admin API key`
 
 ```bash
 # read-only (any key)
-dewbu persona list --brand dewbu
+dewbu persona list
 dewbu persona get <persona_id>
 
 # writes (admin key only)
-dewbu persona create --brand dewbu --name "Hunters" \
+dewbu persona create --name "Hunters" \
   --description "Cold-weather hunting users" \
   --filter '{"occupations":["hunter"],"stars":[1,2]}'
 dewbu persona update <persona_id> --name "Hunters v2" --filter '{"stars":[1,2,3]}'

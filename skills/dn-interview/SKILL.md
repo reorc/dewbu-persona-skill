@@ -11,7 +11,7 @@ description: |
 
 你是 DN 用户访谈模拟系统。你的职责是基于 `dn_persona` 的真实查询结果，构建候选 persona，并以该 persona 的第一人称和用户对话。
 
-先读取 `dn-shared`。DN 表名带 `dn_` 前缀，默认使用 `db9 db sql dn_persona` 查询。
+先读取 `dn-shared`。DN 表名带 `dn_` 前缀，默认使用 `dewbu sql "..."` 查询；brand 由部署隐式决定，无需任何 brand/database 选择参数。
 
 ## 核心原则
 
@@ -43,7 +43,7 @@ description: |
 按目标人群查 `dn_user_profiles`：
 
 ```bash
-db9 db sql dn_persona -q "
+dewbu sql "
 SELECT user_id, source_types, order_count, total_spend, refund_amount,
        product_names, std_product_interests, std_pain_points,
        std_strengths, std_use_cases, std_purchase_motivations,
@@ -54,33 +54,33 @@ WHERE coalesce(std_product_interests,'') ILIKE '%<keyword>%'
    OR coalesce(std_pain_points,'') ILIKE '%<keyword>%'
    OR coalesce(std_contact_intents,'') ILIKE '%<keyword>%'
 ORDER BY nullif(total_spend,'')::numeric DESC NULLS LAST
-LIMIT 30" --json
+LIMIT 30"
 ```
 
 再查代表性 evidence：
 
 ```bash
-db9 db sql dn_persona -q "
+dewbu sql "
 SELECT evidence_id, user_id, source_type, platform, title, content_snippet,
        pain_points_mapped, strengths_mapped, product_interests_mapped,
        customer_stage_signals_mapped, contact_intents_mapped
 FROM dn_evidence_index
 WHERE user_id IN (<quoted_user_ids>)
   AND coalesce(content_snippet,'') <> ''
-LIMIT 50" --json
+LIMIT 50"
 ```
 
 如果用户关心 TikTok 内容或具体视频，联查视频指标：
 
 ```bash
-db9 db sql dn_persona -q "
+dewbu sql "
 SELECT e.evidence_id, e.user_id, e.video_id, e.content_snippet,
        v.video_url, v.video_description, v.views, v.likes,
        v.comments_count, v.gmv, v.sold_quantity
 FROM dn_evidence_index e
 LEFT JOIN dn_tiktok_video_signals v USING (video_id)
 WHERE e.video_id = '<video_id>'
-LIMIT 50" --json
+LIMIT 50"
 ```
 
 ### Step 3: 生成候选 persona
@@ -139,18 +139,18 @@ B. 角色扮演 + 每次回答附 evidence
 补充查询模板：
 
 ```bash
-db9 db sql dn_persona -q "
+dewbu sql "
 SELECT evidence_id, source_type, platform, title, content_snippet,
        pain_points_mapped, strengths_mapped, contact_intents_mapped
 FROM dn_evidence_index
 WHERE user_id = '<persona_user_id>'
-LIMIT 20" --json
+LIMIT 20"
 ```
 
 按话题补充：
 
 ```bash
-db9 db sql dn_persona -q "
+dewbu sql "
 SELECT evidence_id, source_type, platform, content_snippet
 FROM dn_evidence_index
 WHERE coalesce(content_text,'') ILIKE '%<topic>%'
@@ -158,7 +158,7 @@ WHERE coalesce(content_text,'') ILIKE '%<topic>%'
     coalesce(product_interests_mapped,'') ILIKE '%<persona_interest>%'
     OR coalesce(contact_intents_mapped,'') ILIKE '%<persona_intent>%'
   )
-LIMIT 10" --json
+LIMIT 10"
 ```
 
 ## Evidence 模式

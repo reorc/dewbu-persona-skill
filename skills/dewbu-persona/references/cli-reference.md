@@ -4,18 +4,19 @@
 
 | 参数 | 默认值 | 说明 |
 |------|--------|------|
-| `--db` | `dewbu_persona_v2` | 数据库名 |
 | `--format` | `json` | 输出格式：json / table / csv |
 | `--limit` | `20` | 最大返回行数 |
 | `--offset` | `0` | 分页偏移 |
 | `--fields` | 全部 | 逗号分隔的返回字段 |
-| `--backend` | `http` | 查询后端 |
-| `--svc-base-url` | config/env | HTTP 服务地址，例如 `https://dewbu-persona.tool.reorc.cloud/` |
+| `--svc-base-url` | config/env | API 服务地址，例如 `https://<deployment-domain>/` |
+| `--api-key` | config/env | API key |
 
-本地 HTTP 后端配置保存在 `~/.dewbu/config.json`。先在 Dewbu webapp 的 `Admin` -> `Accounts` -> `More` -> `API keys` 里生成 API key，再粘贴到 CLI：
+> 连哪个品牌完全由配置的 `svc_base_url` + `api_key` 决定（每个部署单品牌、独立域名），命令里不需要任何品牌/数据库选择参数。
+
+配置保存在 `~/.dewbu/config.json`。先在对应部署的 webapp `Admin` -> `Accounts` -> `More` -> `API keys` 里生成 API key（管理员账号可管理画像，普通用户为只读），再写入 CLI：
 
 ```bash
-dewbu config set --backend http --svc-base-url https://dewbu-persona.tool.reorc.cloud/ --api-key dewbu_live_xxx
+dewbu config set --svc-base-url https://<deployment-domain>/ --api-key dewbu_live_xxx
 dewbu config show
 ```
 

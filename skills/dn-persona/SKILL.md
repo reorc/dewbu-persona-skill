@@ -9,9 +9,9 @@ description: |
 
 # DN Persona 问数 Skill
 
-你是 DN 用户画像问数系统的 Agent。你的职责是通过 `db9 db sql dn_persona` 查询结构化数据，回答用户关于 DN 消费者洞察的问题。
+你是 DN 用户画像问数系统的 Agent。你的职责是通过 `dewbu sql "..."` 查询结构化数据，回答用户关于 DN 消费者洞察的问题。
 
-先读取 `dn-shared` 的数据模型和查询约定。DN 表名带 `dn_` 前缀，默认不要使用 `dewbu evidence/profile/tags` 命令。
+先读取 `dn-shared` 的数据模型和查询约定。DN 表名带 `dn_` 前缀；brand 由部署隐式决定，无需任何 brand/database 选择参数。
 
 ## 核心原则
 
@@ -48,10 +48,10 @@ description: |
 用户要求看原始评论、客服聊天、视频评论或某个 evidence。
 
 ```bash
-db9 db sql dn_persona -q "
+dewbu sql "
 SELECT *
 FROM dn_evidence_index
-WHERE evidence_id = '<evidence_id>'" --json
+WHERE evidence_id = '<evidence_id>'"
 ```
 
 如果需要更完整源字段，根据 `source_type` 查源表：
@@ -72,14 +72,14 @@ WHERE evidence_id = '<evidence_id>'" --json
 
 ### Flow E: 画像管理（保存/编辑画像）
 
-用户要"把这个人群存成画像"、"更新/删除画像"、"重新计算画像统计"时，用 `dewbu persona ... --brand dn` 命令（走 HTTP API，详见 dn-shared 的「Managing saved personas (DN)」）。
+用户要"把这个人群存成画像"、"更新/删除画像"、"重新计算画像统计"时，用 `dewbu persona ...` 命令（走 HTTP API，详见 dn-shared 的「Managing saved personas (DN)」）。
 
 ```
 1. 先按 Flow A/B 圈定人群并确认过滤条件
-2. 创建：dewbu persona create --brand dn --name ... --filter '<json>'
+2. 创建：dewbu persona create --name ... --filter '<json>'
 3. 修改：dewbu persona update <id> --filter '<json>'（改 filter 后缓存失效）
 4. 重算：dewbu persona build <id>
-5. 列表/查看：dewbu persona list --brand dn / get（只读 key 即可）
+5. 列表/查看：dewbu persona list / get（只读 key 即可）
 ```
 
 **权限说明**：增删改建需要管理员 API key；只读 key 只能 list/get。收到 `403 — needs an admin API key` 时，提示用户改用管理员账号生成的 key。
@@ -89,29 +89,29 @@ WHERE evidence_id = '<evidence_id>'" --json
 ### 标签探索
 
 ```bash
-db9 db sql dn_persona -q "
+dewbu sql "
 SELECT dimension, tag_value, evidence_count, user_count
 FROM dn_tag_dictionary
 WHERE tag_value ILIKE '%<keyword>%'
    OR dimension ILIKE '%<keyword>%'
 ORDER BY nullif(evidence_count,'')::numeric DESC NULLS LAST
-LIMIT 30" --json
+LIMIT 30"
 ```
 
 ### Top 标签
 
 ```bash
-db9 db sql dn_persona -q "
+dewbu sql "
 SELECT dimension, tag_value, evidence_count, user_count
 FROM dn_tag_dictionary
 ORDER BY nullif(evidence_count,'')::numeric DESC NULLS LAST
-LIMIT 30" --json
+LIMIT 30"
 ```
 
 ### 文本 evidence 搜索
 
 ```bash
-db9 db sql dn_persona -q "
+dewbu sql "
 SELECT evidence_id, source_type, platform, user_id, title, content_snippet,
        pain_points_mapped, strengths_mapped, product_interests_mapped,
        customer_stage_signals_mapped, contact_intents_mapped
@@ -122,36 +122,36 @@ WHERE coalesce(content_text,'') ILIKE '%<keyword>%'
    OR coalesce(strengths_mapped,'') ILIKE '%<keyword>%'
    OR coalesce(product_interests_mapped,'') ILIKE '%<keyword>%'
    OR coalesce(contact_intents_mapped,'') ILIKE '%<keyword>%'
-LIMIT 20" --json
+LIMIT 20"
 ```
 
 ### Source 分布
 
 ```bash
-db9 db sql dn_persona -q "
+dewbu sql "
 SELECT source_type, platform, count(*) AS evidence_count
 FROM dn_evidence_index
 GROUP BY source_type, platform
-ORDER BY evidence_count DESC" --json
+ORDER BY evidence_count DESC"
 ```
 
 ### 高消费用户
 
 ```bash
-db9 db sql dn_persona -q "
+dewbu sql "
 SELECT user_id, source_types, order_count, total_spend, refund_amount,
        product_names, std_product_interests, std_pain_points,
        std_contact_intents, std_commercial_value_signals
 FROM dn_user_profiles
 WHERE nullif(total_spend,'')::numeric >= 200
 ORDER BY nullif(total_spend,'')::numeric DESC NULLS LAST
-LIMIT 20" --json
+LIMIT 20"
 ```
 
 ### 某类用户的 evidence
 
 ```bash
-db9 db sql dn_persona -q "
+dewbu sql "
 WITH target_users AS (
   SELECT user_id
   FROM dn_user_profiles
@@ -163,13 +163,13 @@ SELECT e.evidence_id, e.source_type, e.platform, e.title, e.content_snippet,
 FROM dn_evidence_index e
 JOIN target_users u USING (user_id)
 WHERE coalesce(e.content_snippet,'') <> ''
-LIMIT 30" --json
+LIMIT 30"
 ```
 
 ### TikTok 视频评论 + 视频指标
 
 ```bash
-db9 db sql dn_persona -q "
+dewbu sql "
 SELECT e.evidence_id, e.video_id, e.content_snippet,
        v.video_url, v.video_description, v.views, v.likes,
        v.comments_count, v.gmv, v.sold_quantity
@@ -177,7 +177,7 @@ FROM dn_evidence_index e
 LEFT JOIN dn_tiktok_video_signals v USING (video_id)
 WHERE e.source_type = 'tiktok_video_comment'
   AND coalesce(e.content_text,'') ILIKE '%<keyword>%'
-LIMIT 20" --json
+LIMIT 20"
 ```
 
 ## 回答格式

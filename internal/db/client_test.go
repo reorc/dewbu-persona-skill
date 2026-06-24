@@ -23,8 +23,11 @@ func TestHTTPBackendQueryRowsAndScalar(t *testing.T) {
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			t.Fatal(err)
 		}
-		if req["database"] != "dewbu_persona_v2" {
-			t.Fatalf("unexpected database: %s", req["database"])
+		if _, ok := req["database"]; ok {
+			t.Fatalf("client should no longer send a database; got %q", req["database"])
+		}
+		if req["sql"] == "" {
+			t.Fatalf("missing sql in request body")
 		}
 		_ = json.NewEncoder(w).Encode(QueryResult{
 			Columns:  []Column{{Name: "count", Type: "int8"}},
@@ -44,14 +47,14 @@ func TestHTTPBackendQueryRowsAndScalar(t *testing.T) {
 		Timeout: time.Second,
 	})
 
-	rows, err := QueryRows("dewbu_persona_v2", "SELECT count(*) FROM evidence_index")
+	rows, err := QueryRows("SELECT count(*) FROM evidence_index")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if got := rows[0]["count"].(float64); got != 42 {
 		t.Fatalf("unexpected row value: %v", got)
 	}
-	scalar, err := QueryScalar("dewbu_persona_v2", "SELECT count(*) FROM evidence_index")
+	scalar, err := QueryScalar("SELECT count(*) FROM evidence_index")
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -45,11 +45,11 @@ writes):
 
 ```bash
 # read-only (any key)
-dewbu persona list --brand dewbu
+dewbu persona list
 dewbu persona get <persona_id>
 
 # writes (admin key only)
-dewbu persona create --brand dewbu --name "Hunters" \
+dewbu persona create --name "Hunters" \
   --description "Cold-weather hunting users" \
   --filter '{"occupations":["hunter"],"stars":[1,2]}'
 dewbu persona update <persona_id> --name "Hunters v2" --filter '{"stars":[1,2,3]}'
