@@ -1,4 +1,4 @@
-# Dewbu Persona Skill — Installation Guide
+# VOC Persona Skill — Installation Guide
 
 ## Prerequisites
 
@@ -17,34 +17,36 @@ Use the Dewbu HTTP API:
 Configure the CLI:
 
 ```bash
-dewbu config set \
-  --backend http \
-  --svc-base-url https://dewbu-persona.tool.reorc.cloud/ \
+voc config set \
+  --svc-base-url https://<deployment-domain>/ \
   --api-key dewbu_live_xxx
 
-dewbu sql "SELECT count(*) FROM evidence_index"
+voc sql "SELECT count(*) FROM evidence_index"
 ```
 
-This writes `~/.dewbu/config.json` with file mode `0600`. You can inspect the active configuration without revealing the full key:
+The deployment you point at (`svc-base-url` + `api-key`) determines the brand —
+there is no brand/database flag.
+
+This writes `~/.voc/config.json` with file mode `0600`. You can inspect the active configuration without revealing the full key:
 
 ```bash
-dewbu config show
+voc config show
 ```
 
-Environment variables and flags still work and take precedence: `DEWBU_BACKEND`, `DEWBU_API_BASE_URL`, and `DEWBU_API_KEY`.
+Environment variables and flags still work and take precedence: `VOC_BACKEND`, `VOC_API_BASE_URL`, and `VOC_API_KEY`. Legacy `DEWBU_*` variables remain accepted for compatibility.
 
 ---
 
 ## Install (One-liner)
 
-Downloads the latest `dewbu` binary and all skills from GitHub Releases:
+Downloads the latest `voc` binary and all skills from GitHub Releases:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/reorc/dewbu-persona-skill/main/install.sh | bash
 ```
 
 This installs:
-- `dewbu` binary → `~/.local/bin/dewbu`
+- `voc` binary → `~/.local/bin/voc`
 - Skills → `~/.claude/skills/dewbu-*` and `~/.agents/skills/dewbu-*`
 
 Ensure `~/.local/bin` is in your PATH:
@@ -63,14 +65,14 @@ Download from [Releases](https://github.com/reorc/dewbu-persona-skill/releases/l
 
 ```bash
 # Example for macOS ARM
-curl -fsSL https://github.com/reorc/dewbu-persona-skill/releases/latest/download/dewbu_<VERSION>_darwin_arm64.tar.gz | tar -xz -C ~/.local/bin
+curl -fsSL https://github.com/reorc/dewbu-persona-skill/releases/latest/download/voc_<VERSION>_darwin_arm64.tar.gz | tar -xz -C ~/.local/bin
 ```
 
 ### Skills
 
 ```bash
 # Download skills tarball
-curl -fsSL https://github.com/reorc/dewbu-persona-skill/releases/latest/download/dewbu-skills_<VERSION>.tar.gz -o /tmp/skills.tar.gz
+curl -fsSL https://github.com/reorc/dewbu-persona-skill/releases/latest/download/voc-skills_<VERSION>.tar.gz -o /tmp/skills.tar.gz
 
 # Extract to skill directories
 mkdir -p ~/.claude/skills ~/.agents/skills
@@ -84,8 +86,8 @@ rm /tmp/skills.tar.gz
 ## Verification
 
 ```bash
-dewbu version
-dewbu tags search battery
+voc version
+voc tags search battery
 ls ~/.claude/skills/dewbu-*/SKILL.md
 ```
 
@@ -105,7 +107,7 @@ curl -fsSL https://raw.githubusercontent.com/reorc/dewbu-persona-skill/main/inst
 
 ```bash
 # Remove binary
-rm ~/.local/bin/dewbu
+rm ~/.local/bin/voc
 
 # Remove skills
 rm -rf ~/.claude/skills/dewbu-persona ~/.claude/skills/dewbu-interview ~/.claude/skills/dewbu-shared

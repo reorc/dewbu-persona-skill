@@ -19,7 +19,7 @@ var (
 
 var configCmd = &cobra.Command{
 	Use:   "config",
-	Short: "Manage local Dewbu CLI configuration",
+	Short: "Manage local VOC CLI configuration",
 }
 
 var configPathCmd = &cobra.Command{
@@ -47,7 +47,7 @@ var configShowCmd = &cobra.Command{
 
 var configSetCmd = &cobra.Command{
 	Use:   "set",
-	Short: "Write local Dewbu CLI configuration",
+	Short: "Write local VOC CLI configuration",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		path := db.DefaultConfigPath()
 		cfg, err := db.LoadConfigFile(path)

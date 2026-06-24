@@ -50,7 +50,7 @@ func runSQL(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("only SELECT (or WITH ... SELECT) queries are allowed")
 	}
 
-	rows, err := db.QueryRows(database, query)
+	rows, err := db.QueryRows(query)
 	if err != nil {
 		return fmt.Errorf("query failed: %w", err)
 	}
@@ -58,7 +58,6 @@ func runSQL(cmd *cobra.Command, args []string) error {
 	resp := &model.Response{
 		Meta: model.Meta{
 			Command:  "sql",
-			Database: database,
 			Total:    len(rows),
 			Returned: len(rows),
 			Limit:    limit,

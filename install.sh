@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Dewbu Persona Skill — Installer
-# Downloads dewbu binary + skills from the latest GitHub Release.
+# VOC Persona Skill — Installer
+# Downloads voc binary + skills from the latest GitHub Release.
 
 REPO="reorc/dewbu-persona-skill"
-INSTALL_DIR="${DEWBU_INSTALL_DIR:-$HOME/.local/bin}"
+INSTALL_DIR="${VOC_INSTALL_DIR:-${DEWBU_INSTALL_DIR:-$HOME/.local/bin}}"
 SKILLS_DIRS=("$HOME/.claude/skills" "$HOME/.agents/skills")
 
 # Detect platform
@@ -40,14 +40,14 @@ TMP_DIR=$(mktemp -d)
 trap 'rm -rf "$TMP_DIR"' EXIT
 
 BASE_URL="https://github.com/${REPO}/releases/download/${LATEST}"
-BINARY_ARCHIVE="dewbu_${VERSION}_${OS}_${ARCH}.tar.gz"
-SKILLS_ARCHIVE="dewbu-skills_${VERSION}.tar.gz"
-CHECKSUM_FILE="dewbu_${VERSION}_checksums.txt"
+BINARY_ARCHIVE="voc_${VERSION}_${OS}_${ARCH}.tar.gz"
+SKILLS_ARCHIVE="voc-skills_${VERSION}.tar.gz"
+CHECKSUM_FILE="voc_${VERSION}_checksums.txt"
 
 echo "==> Downloading checksums..."
 curl -fsSL "${BASE_URL}/${CHECKSUM_FILE}" -o "$TMP_DIR/checksums.txt"
 
-echo "==> Downloading dewbu binary..."
+echo "==> Downloading voc binary..."
 curl -fsSL "${BASE_URL}/${BINARY_ARCHIVE}" -o "$TMP_DIR/${BINARY_ARCHIVE}"
 
 echo "==> Downloading skills..."
@@ -73,9 +73,12 @@ done
 
 # Install binary
 mkdir -p "$INSTALL_DIR"
-tar -xzf "$TMP_DIR/${BINARY_ARCHIVE}" -C "$INSTALL_DIR" dewbu
-chmod +x "$INSTALL_DIR/dewbu"
-echo "    Installed: $INSTALL_DIR/dewbu"
+tar -xzf "$TMP_DIR/${BINARY_ARCHIVE}" -C "$INSTALL_DIR" voc
+chmod +x "$INSTALL_DIR/voc"
+echo "    Installed: $INSTALL_DIR/voc"
+if [[ -f "$INSTALL_DIR/dewbu" ]]; then
+  echo "    Note: legacy binary still exists at $INSTALL_DIR/dewbu; use voc for new commands."
+fi
 
 # Install skills. The skills archive contains top-level skill directories
 # such as dewbu-persona, dewbu-interview, dn-persona, and dn-interview.
@@ -102,8 +105,8 @@ done
 rm -rf "$TMP_SKILLS"
 
 echo ""
-echo "==> Done! dewbu ${LATEST} installed."
-echo "    Binary: $INSTALL_DIR/dewbu"
+echo "==> Done! voc ${LATEST} installed."
+echo "    Binary: $INSTALL_DIR/voc"
 echo "    Skills: ${SKILLS_DIRS[*]}"
 echo ""
 

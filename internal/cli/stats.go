@@ -66,7 +66,7 @@ func runStatsTags(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("invalid group-by: %s (use dimension or tag)", stGroupBy)
 	}
 
-	rows, err := db.QueryRows(database, sql)
+	rows, err := db.QueryRows(sql)
 	if err != nil {
 		return fmt.Errorf("stats query failed: %w", err)
 	}
@@ -74,7 +74,6 @@ func runStatsTags(cmd *cobra.Command, args []string) error {
 	resp := &model.Response{
 		Meta: model.Meta{
 			Command:  "stats.tags",
-			Database: database,
 			Total:    len(rows),
 			Returned: len(rows),
 			Limit:    stTop,
