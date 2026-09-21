@@ -43,6 +43,11 @@ archives:
 checksum:
   name_template: "voc_{{ .Version }}_checksums.txt"
   algorithm: sha256
+  # The skills archive is produced in a before hook and uploaded as an
+  # extra file, so include it explicitly in the checksum manifest too.
+  extra_files:
+    - glob: ./.release-extra/voc-skills.tar.gz
+      name_template: voc-skills_{{ .Version }}.tar.gz
 
 release:
   github:

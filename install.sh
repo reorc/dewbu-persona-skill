@@ -22,7 +22,11 @@ echo "==> Detecting platform: ${OS}_${ARCH}"
 
 # Get latest release tag
 echo "==> Fetching latest release..."
-LATEST=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+TMP_DIR=$(mktemp -d)
+trap 'rm -rf "$TMP_DIR"' EXIT
+RELEASE_JSON="$TMP_DIR/release.json"
+curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" -o "$RELEASE_JSON"
+LATEST=$(grep '"tag_name"' "$RELEASE_JSON" | sed -E 's/.*"([^"]+)".*/\1/' | head -1)
 VERSION="${LATEST#v}"
 echo "    Version: ${LATEST}"
 
@@ -34,10 +38,6 @@ sha256_file() {
     shasum -a 256 "$1" | awk '{print $1}'
   fi
 }
-
-# Download checksums and archives to temp dir
-TMP_DIR=$(mktemp -d)
-trap 'rm -rf "$TMP_DIR"' EXIT
 
 BASE_URL="https://github.com/${REPO}/releases/download/${LATEST}"
 BINARY_ARCHIVE="voc_${VERSION}_${OS}_${ARCH}.tar.gz"
@@ -57,6 +57,24 @@ curl -fsSL "${BASE_URL}/${SKILLS_ARCHIVE}" -o "$TMP_DIR/${SKILLS_ARCHIVE}"
 echo "==> Verifying checksums..."
 for archive in "$BINARY_ARCHIVE" "$SKILLS_ARCHIVE"; do
   EXPECTED=$(awk -v file="$archive" '$2 == file {print $1}' "$TMP_DIR/checksums.txt")
+  # Older releases omitted extra files from the GoReleaser checksum manifest.
+  # Fall back to the SHA-256 digest recorded on the GitHub release asset so
+  # those releases remain installable without disabling verification.
+  if [[ -z "$EXPECTED" ]]; then
+    EXPECTED=$(awk -v file="$archive" '
+      index($0, "\"name\": \"" file "\"") { found=1; next }
+      found && /"digest": "sha256:/ {
+        sub(/^.*"digest": "sha256:/, "")
+        sub(/".*$/, "")
+        print
+        exit
+      }
+      found && /"name": / { exit }
+    ' "$RELEASE_JSON")
+    if [[ -n "$EXPECTED" ]]; then
+      echo "    Using GitHub release digest for $archive"
+    fi
+  fi
   ACTUAL=$(sha256_file "$TMP_DIR/$archive")
   if [[ -z "$EXPECTED" ]]; then
     echo "    ERROR: checksum entry not found for $archive" >&2
